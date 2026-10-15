@@ -18,3 +18,8 @@ backend/**/__pycache__/
 frontend-backup-*/
 *.backup-*
 package-lock.json
+
+# Local backups and generated files
+frontend-backup-*/
+*.backup-*
+package-lock.json
