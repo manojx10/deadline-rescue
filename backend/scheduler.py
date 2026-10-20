@@ -60,7 +60,10 @@ def task_priority_score(task: Dict[str, Any], now: datetime) -> float:
     duration = max(1, int(task.get("estimated_minutes", 1)))
 
     if minutes_remaining <= 0:
-        urgency_score = 100
+        # Overdue tasks become increasingly urgent, capped to preserve
+        # the influence of explicit priority and task duration.
+        overdue_hours = abs(minutes_remaining) / 60
+        urgency_score = min(130, 100 + overdue_hours / 24 * 5)
     elif minutes_remaining <= duration:
         urgency_score = 80
     elif minutes_remaining <= 180:

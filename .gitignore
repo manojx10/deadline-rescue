@@ -17,9 +17,33 @@ backend/**/__pycache__/
 # Local backups and generated files
 frontend-backup-*/
 *.backup-*
+*.backup
+*.bak
+*.before-*
 package-lock.json
 
 # Local backups and generated files
 frontend-backup-*/
 *.backup-*
 package-lock.json
+backend/.venv/
+backend/**/__pycache__/
+**/__pycache__/
+.pytest_cache/
+*.py[cod]
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+.DS_Store
+.env
+.env.*
+!.env.example
+frontend/dist/
+frontend/node_modules/
+node_modules/
+frontend-backup-*/
+*.backup-*

@@ -88,6 +88,17 @@ class SchedulerTests(unittest.TestCase):
         self.assertEqual(result["schedule"]["scheduled_count"], 1)
         self.assertEqual(result["schedule"]["schedule"][0]["start"], (self.now + timedelta(minutes=30)).isoformat())
 
+    def test_more_overdue_task_ranks_higher_when_other_factors_match(self):
+        slightly_overdue = self.task(1, "Slightly overdue", 30, -60, "medium")
+        very_overdue = self.task(2, "Very overdue", 30, -48 * 60, "medium")
+
+        ordered = prioritize_tasks(
+            [slightly_overdue, very_overdue],
+            now=self.now,
+        )
+
+        self.assertEqual(ordered[0]["title"], "Very overdue")
+
 
 if __name__ == "__main__":
     unittest.main()

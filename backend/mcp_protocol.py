@@ -70,6 +70,17 @@ class DeadlineRescueMCPServer:
         if method == "initialize":
             if is_notification:
                 return None
+            requested_version = params.get("protocolVersion")
+            if requested_version != MCP_PROTOCOL_VERSION:
+                return _error(
+                    request_id,
+                    -32602,
+                    "Unsupported protocol version",
+                    {
+                        "requested": requested_version,
+                        "supported": [MCP_PROTOCOL_VERSION],
+                    },
+                )
             return _success(
                 request_id,
                 {

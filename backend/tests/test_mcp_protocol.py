@@ -1,23 +1,14 @@
-import os
 import sys
-import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-TEST_DATABASE = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-TEST_DATABASE.close()
-os.environ["DEADLINE_RESCUE_DATABASE_PATH"] = TEST_DATABASE.name
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import main
 
 
 class MCPProtocolTests(unittest.TestCase):
-    @classmethod
-    def tearDownClass(cls):
-        Path(TEST_DATABASE.name).unlink(missing_ok=True)
-
     def request(self, request_id, method, params=None):
         return main.mcp_server.handle({
             "jsonrpc": "2.0",
@@ -35,8 +26,81 @@ class MCPProtocolTests(unittest.TestCase):
         self.assertEqual(initialized["result"]["protocolVersion"], "2025-11-25")
 
         tools = self.request(2, "tools/list")["result"]["tools"]
-        self.assertIn("recover_from_disruption", [tool["name"] for tool in tools])
+        self.assertEqual(
+            {tool["name"] for tool in tools},
+            {
+                "list_tasks",
+                "create_task",
+                "set_task_status",
+                "build_focus_plan",
+                "recover_from_disruption",
+                "get_deadline_risks",
+                "get_recovery_history",
+                "list_reminders",
+                "create_reminder",
+                "update_reminder",
+            },
+        )
         self.assertTrue(all("inputSchema" in tool for tool in tools))
+        self.assertTrue(
+            all(
+                tool["inputSchema"].get("additionalProperties") is False
+                for tool in tools
+            )
+        )
+
+    def test_initialize_rejects_an_unsupported_protocol_version(self):
+        response = self.request(3, "initialize", {
+            "protocolVersion": "2025-03-26",
+            "capabilities": {},
+            "clientInfo": {"name": "test-client", "version": "1.0.0"},
+        })
+
+        self.assertEqual(response["error"]["code"], -32602)
+        self.assertEqual(
+            response["error"]["data"]["supported"],
+            ["2025-11-25"],
+        )
+
+    def test_groq_tool_definitions_use_the_same_canonical_schemas(self):
+        tools = main.groq_tool_definitions()
+
+        self.assertEqual(len(tools), len(main.MCP_TOOLS))
+        self.assertTrue(all(tool["type"] == "function" for tool in tools))
+        self.assertEqual(
+            [tool["function"]["name"] for tool in tools],
+            [tool["name"] for tool in main.MCP_TOOLS],
+        )
+        self.assertEqual(
+            [tool["function"]["parameters"] for tool in tools],
+            [tool["inputSchema"] for tool in main.MCP_TOOLS],
+        )
+
+    def test_tool_calls_reject_undeclared_or_invalid_arguments(self):
+        response = self.request(3, "tools/call", {
+            "name": "build_focus_plan",
+            "arguments": {
+                "available_minutes": 30,
+                "unexpected": True,
+            },
+        })["result"]
+
+        self.assertTrue(response["isError"])
+        self.assertIn(
+            "Unexpected tool argument",
+            response["structuredContent"]["error"],
+        )
+
+        response = self.request(4, "tools/call", {
+            "name": "list_reminders",
+            "arguments": {"include_completed": "false"},
+        })["result"]
+
+        self.assertTrue(response["isError"])
+        self.assertIn(
+            "include_completed must be a boolean",
+            response["structuredContent"]["error"],
+        )
 
     def test_tools_persist_and_recover_a_task(self):
         deadline = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
