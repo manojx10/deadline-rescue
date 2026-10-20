@@ -47,3 +47,7 @@ frontend/node_modules/
 node_modules/
 frontend-backup-*/
 *.backup-*
+
+# Local frontend backups
+frontend/src/*.pre-consolidation
+frontend/src/*.voice-prepatch-backup
