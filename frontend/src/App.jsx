@@ -4,7 +4,7 @@ import {
   ChevronRight, Circle, Clock3, Coffee, Command, EllipsisVertical, Flag, Folder, History, House,
   LifeBuoy, ListTodo, Menu, Mic, Moon, Pause, Play, Plus, RotateCcw, Search, Send, Settings,
   Sparkle, Sparkles, SquarePen, StickyNote, Sun, Target, Trash2, TrendingUp, TriangleAlert,
-  Volume2, VolumeX, X,
+  Volume2, VolumeX, X, Users,
 } from "lucide-react";
 import "./App.css";
 import "./assistant.css";
@@ -15,15 +15,154 @@ import { apiTaskToView, formatDateTime } from "./lib/taskAdapter";
 /* Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-// There is no profile endpoint in the backend, so the person shown in the
-// greeting and sidebar lives here. Edit these two values to change it.
-const PROFILE = { name: "Manoj", role: "CSE Student" };
+const PROFILE_KEY = "edith-user-profile-v1";
+const THEME_KEY = "edith-theme-v1";
+
+const DEFAULT_PROFILE = {
+  fullName: "",
+  preferredName: "",
+  email: "",
+  role: "Student",
+  timezone: "Asia/Kolkata",
+  wakeTime: "07:00",
+  sleepTime: "23:00",
+  dailyFocusMinutes: 240,
+  activeDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+  theme: "System",
+};
+
+function readProfile() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+    return saved && saved.preferredName
+      ? { ...DEFAULT_PROFILE, ...saved }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveProfile(profile) {
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    localStorage.setItem(THEME_KEY, profile.theme || "System");
+  } catch {
+    // The app remains usable if browser storage is unavailable.
+  }
+}
+
+let PROFILE = (() => {
+  const saved = readProfile();
+  return saved
+    ? { ...saved, name: saved.preferredName, role: saved.role }
+    : { name: "there", role: "Your profile" };
+})();
 
 const CHAT_KEY = "edith-chat-history-v1";
+function chatStorageKey() {
+  try {
+    const profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+    return `${CHAT_KEY}:${profile?.id || "default"}`;
+  } catch {
+    return `${CHAT_KEY}:default`;
+  }
+}
 const MINUTES_KEY = "edith-available-minutes";
 const SCENE_KEY = "edith-scene";
 const LEGACY_GREETING =
   "Hey, I’m EDITH. What would you like to get done? I can help plan your time, organize tasks, check deadlines, and save notes you ask me to remember.";
+
+function ProfileSetup({ initialProfile, onSave, onCancel }) {
+  const [form, setForm] = useState(() => ({
+    ...DEFAULT_PROFILE,
+    ...(initialProfile || {}),
+  }));
+  const [daysText, setDaysText] = useState(
+    (form.activeDays || DEFAULT_PROFILE.activeDays).join(", ")
+  );
+
+  function update(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    const preferredName = form.preferredName.trim();
+    if (!form.fullName.trim() || !preferredName) return;
+    onSave({
+      ...form,
+      fullName: form.fullName.trim(),
+      preferredName,
+      email: form.email.trim(),
+      activeDays: daysText.split(",").map((day) => day.trim()).filter(Boolean),
+      dailyFocusMinutes: Number(form.dailyFocusMinutes) || 240,
+    });
+  }
+
+  return (
+    <main className="profile-setup-wrap">
+      <form className="profile-setup" onSubmit={submit}>
+        {initialProfile && onCancel && (
+          <button type="button" className="profile-setup-close"
+            onClick={onCancel} aria-label="Close profile editor"
+            title="Back to EDITH">×</button>
+        )}
+        <span className="profile-setup-mark"><Sparkles size={22} /></span>
+        <p className="profile-setup-kicker">MAKE EDITH YOURS</p>
+        <h1>{initialProfile ? "Your profile" : "Let's get to know you."}</h1>
+        <p className="profile-setup-intro">A few details help EDITH plan around your day. You can update them any time.</p>
+
+        <label>Full name *
+          <input required value={form.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" />
+        </label>
+        <label>Preferred name *
+          <input required value={form.preferredName} onChange={(e) => update("preferredName", e.target.value)} />
+        </label>
+        <label>Email (optional)
+          <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} autoComplete="email" />
+        </label>
+        <label>What best describes you?
+          <select value={form.role} onChange={(e) => update("role", e.target.value)}>
+            <option>Student</option>
+            <option>Professional</option>
+            <option>Freelancer / entrepreneur</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <div className="profile-setup-grid">
+          <label>Wake-up time
+            <input type="time" value={form.wakeTime} onChange={(e) => update("wakeTime", e.target.value)} />
+          </label>
+          <label>Sleep time
+            <input type="time" value={form.sleepTime} onChange={(e) => update("sleepTime", e.target.value)} />
+          </label>
+        </div>
+        <label>Timezone
+          <select value={form.timezone} onChange={(e) => update("timezone", e.target.value)}>
+            <option value="Asia/Kolkata">India — Asia/Kolkata</option>
+            <option value="UTC">UTC</option>
+            <option value="America/New_York">US Eastern</option>
+            <option value="Europe/London">UK — London</option>
+          </select>
+        </label>
+        <label>Daily focus time (minutes)
+          <input type="number" min="30" max="600" step="30" value={form.dailyFocusMinutes} onChange={(e) => update("dailyFocusMinutes", e.target.value)} />
+        </label>
+        <label>Usual study or work days (comma-separated)
+          <input value={daysText} onChange={(e) => setDaysText(e.target.value)} placeholder="Monday, Tuesday, Wednesday…" />
+        </label>
+        <label>Appearance
+          <select value={form.theme} onChange={(e) => update("theme", e.target.value)}>
+            <option>System</option>
+            <option>Light</option>
+            <option>Dark</option>
+          </select>
+        </label>
+        <button className="profile-setup-submit" type="submit">Save profile <ArrowRight size={17} /></button>
+      </form>
+    </main>
+  );
+}
 
 const NAV = [
   { id: "overview", label: "Home", icon: House },
@@ -36,10 +175,7 @@ const NAV = [
     { id: "projects", label: "Projects", icon: Folder },
     { id: "notes", label: "Notes", icon: StickyNote },
   ]},
-  { id: "edith-ai", label: "EDITH AI", icon: Sparkles, children: [
-    { id: "studio", label: "Assistant", icon: Bot },
-    { id: "analytics", label: "Analytics", icon: ChartColumn },
-  ]},
+  { id: "studio", label: "EDITH AI", icon: Sparkles },
 ];
 
 const PAGE_TITLES = {
@@ -369,7 +505,7 @@ function FocusProvider({ children }) {
 
 function loadMessages() {
   try {
-    const saved = JSON.parse(localStorage.getItem(CHAT_KEY) || "null");
+    const saved = JSON.parse(localStorage.getItem(chatStorageKey()) || "null");
     if (Array.isArray(saved)) {
       return saved.filter((message, index) => !(index === 0 && message?.role === "assistant" && message.text === LEGACY_GREETING));
     }
@@ -394,7 +530,7 @@ function useEdithChat({ refreshTasks }) {
   const sendRef = useRef(null);
 
   useEffect(() => {
-    try { localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-200))); } catch { /* storage full or blocked */ }
+    try { localStorage.setItem(chatStorageKey(), JSON.stringify(messages.slice(-200))); } catch { /* storage full or blocked */ }
   }, [messages]);
 
   useEffect(() => { voiceRef.current = voiceEnabled; }, [voiceEnabled]);
@@ -480,7 +616,7 @@ function useEdithChat({ refreshTasks }) {
     setMessages([]);
     setError("");
     setLastFailed("");
-    try { localStorage.removeItem(CHAT_KEY); } catch { /* ignore */ }
+    try { localStorage.removeItem(chatStorageKey()); } catch { /* ignore */ }
   }, []);
 
   const toggleVoice = useCallback(() => {
@@ -675,9 +811,9 @@ function Panel({ title, action, className = "", children, ...rest }) {
 /* Sidebar                                                            */
 /* ------------------------------------------------------------------ */
 
-function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro, openCount }) {
+function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro, onEditProfile, onManageProfiles, openCount }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [expandedGroup, setExpandedGroup] = useState(() => ["tasks", "schedule", "rescue"].includes(page) ? "plan" : ["projects", "notes"].includes(page) ? "workspace" : ["studio", "analytics"].includes(page) ? "edith-ai" : "");
+  const [expandedGroup, setExpandedGroup] = useState(() => ["tasks", "schedule", "rescue"].includes(page) ? "plan" : ["projects", "notes"].includes(page) ? "workspace" : ["studio", "analytics"].includes(page) ? "" : "");
   const settingsRef = useRef(null);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   useDismiss(settingsRef, settingsOpen, closeSettings);
@@ -783,6 +919,12 @@ function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro, 
               {chat.voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
               Spoken replies: {chat.voiceEnabled ? "on" : "off"}
             </button>
+            <button type="button" role="menuitem" onClick={() => { setSettingsOpen(false); onEditProfile(); }}>
+              <Settings size={16} /> Edit profile
+            </button>
+            <button type="button" role="menuitem" onClick={() => { setSettingsOpen(false); onManageProfiles(); }}>
+              <Users size={16} /> Switch / add profile
+            </button>
             <button type="button" role="menuitem" onClick={() => { chat.clear(); setSettingsOpen(false); }}>
               <Trash2 size={16} /> Clear chat history
             </button>
@@ -800,7 +942,7 @@ function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro, 
 /* Top bar (over the hero) and command bar                            */
 /* ------------------------------------------------------------------ */
 
-function TopBar({ risks, risksLoading, scene, onScene, onMenu, onOpenRail, showMenu, showRailButton, railOpen }) {
+function TopBar({ risks, risksLoading, scene, theme, onThemeToggle, onEditProfile, onScene, onMenu, onOpenRail, showMenu, showRailButton, railOpen }) {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   const closeBell = useCallback(() => setBellOpen(false), []);
@@ -810,7 +952,13 @@ function TopBar({ risks, risksLoading, scene, onScene, onMenu, onOpenRail, showM
   return (
     <div className="topbar">
       {showMenu && (
-        <button type="button" className="icon-button topbar-menu" onClick={onMenu} aria-label="Open menu" aria-controls="sidebar">
+        <button
+          type="button"
+          className="icon-button topbar-menu"
+          onClick={onMenu}
+          aria-label="Open menu"
+          aria-controls="sidebar"
+        >
           <Menu size={20} />
         </button>
       )}
@@ -818,12 +966,12 @@ function TopBar({ risks, risksLoading, scene, onScene, onMenu, onOpenRail, showM
         <button
           type="button"
           className="icon-button"
-          onClick={onScene}
-          aria-pressed={scene === "night"}
-          aria-label={scene === "night" ? "Switch to dusk lighting" : "Switch to night lighting"}
-          title={scene === "night" ? "Dusk lighting" : "Night lighting"}
+          onClick={onThemeToggle}
+          aria-pressed={theme === "Dark"}
+          aria-label={theme === "Dark" ? "Switch to light theme" : "Switch to dark theme"}
+          title={theme === "Dark" ? "Switch to light theme" : "Switch to dark theme"}
         >
-          {scene === "night" ? <Moon size={20} /> : <Sun size={20} />}
+          {theme === "Dark" ? <Sun size={20} /> : <Moon size={20} />}
         </button>
         <div className="bell-wrap" ref={bellRef}>
           <button
@@ -848,7 +996,7 @@ function TopBar({ risks, risksLoading, scene, onScene, onMenu, onOpenRail, showM
             </div>
           )}
         </div>
-        <span className="avatar" aria-hidden="true">{PROFILE.name.charAt(0)}</span>
+        <button type="button" className="avatar topbar-profile-button" onClick={onEditProfile} aria-label="Open profile" title="Edit profile">{PROFILE.name.charAt(0)}</button>
         {showRailButton && (
           <button
             type="button"
@@ -884,7 +1032,7 @@ function CommandBar({ onAsk, onNewTask, inputRef }) {
         ref={inputRef}
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder={"Ask EDITH… “plan 2 hours”, “check deadline risks”"}
+        placeholder="Ask EDITH…"
         aria-label="Ask EDITH"
         maxLength={2000}
       />
@@ -1013,9 +1161,21 @@ function ChatMessage({ message, now, onViewTask }) {
 
 function ChatThread({ chat, onViewTask }) {
   const now = useNow(60000);
+  const threadRef = useRef(null);
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (!thread) return;
+    const scroller = thread.closest(".studio-scroll, .rail-scroll") || thread.parentElement;
+    if (scroller) {
+      scroller.scrollTo({
+        top: scroller.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [chat.messages, chat.busy, chat.error]);
   const labels = chat.messages.map((message) => (message.ts ? dayLabel(message.ts, now) : null));
   return (
-    <div className="thread" aria-live="polite" aria-relevant="additions">
+    <div ref={threadRef} className="thread" aria-live="polite" aria-relevant="additions">
       {chat.messages.map((message, index) => {
         const label = labels[index];
         const earlier = labels.slice(0, index).reverse().find(Boolean) ?? null;
@@ -2668,12 +2828,7 @@ function AlexaPane() {
           )}
         </div>
       </div>
-      <details className="chat-details glass-note">
-        <summary>Developer details</summary>
-        {activity.map((entry, index) => <p key={`${entry}-${index}`}>{pad(index + 1)} · {entry}</p>)}
-        <p>Self-hosted MCP server with a browser-based simulation. Not connected to a consumer Alexa+ device or private preview tools.</p>
-      </details>
-      <p className="disclosure">This is a hackathon simulation of an assistant experience, not a live connection to an Alexa+ device.</p>
+<p className="disclosure">This is a hackathon simulation of an assistant experience, not a live connection to an Alexa+ device.</p>
     </div>
   );
 }
@@ -2743,7 +2898,7 @@ function AssistantPane({ chat, onViewTask }) {
 
 function StudioPage({ chat, onViewTask }) {
   const [tab, setTab] = useState("assistant");
-  const tabs = [["assistant", "Assistant", Bot], ["alexa", "Alexa+ simulator", Sparkles]];
+  const tabs = [["assistant", "Assistant", Bot]];
   return (
     <div className="studio">
       <div className="tabs" role="tablist" aria-label="EDITH Studio">
@@ -2754,7 +2909,7 @@ function StudioPage({ chat, onViewTask }) {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "assistant" ? <AssistantPane chat={chat} onViewTask={onViewTask} /> : <AlexaPane />}
+        <AssistantPane chat={chat} onViewTask={onViewTask} />
       </div>
     </div>
   );
@@ -2773,7 +2928,7 @@ function readStored(key, fallback) {
   }
 }
 
-function Shell({ onReplayIntro }) {
+function Shell({ onReplayIntro, onEditProfile, onManageProfiles, theme, onThemeToggle }) {
   const focus = useFocus();
   const now = useNow(30000);
   const [page, setPage] = useState("overview");
@@ -2859,7 +3014,9 @@ function Shell({ onReplayIntro }) {
   }, [scene]);
 
   // Drawers only exist on narrow screens; on desktop the stored flags are simply ignored.
-  const railShown = isDrawer && railOpen;
+  const railAllowed = page !== "studio";
+  const railShown = railAllowed && isDrawer && railOpen;
+  const railPersistent = page === "overview" && !isDrawer;
   const menuShown = isMobile && menuOpen;
   useEffect(() => { if (railShown) composerRef.current?.focus(); }, [railShown]);
 
@@ -2962,7 +3119,7 @@ function Shell({ onReplayIntro }) {
   const online = !dataError;
 
   return (
-    <div className={`app scene-${scene}`}>
+    <div className={`app scene-${scene} page-${page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
       <Sidebar
         page={page}
@@ -2972,6 +3129,8 @@ function Shell({ onReplayIntro }) {
         open={menuShown}
         chat={chat}
         onReplayIntro={onReplayIntro}
+        onEditProfile={onEditProfile}
+        onManageProfiles={onManageProfiles}
         openCount={openTasks.length}
       />
 
@@ -2982,14 +3141,27 @@ function Shell({ onReplayIntro }) {
             <div className="hero-shade" />
           </div>
           <TopBar
+            theme={theme}
+            onThemeToggle={onThemeToggle}
+            onEditProfile={onEditProfile}
             risks={risks.data}
             risksLoading={risks.loading && !risks.data}
             scene={scene}
-            onScene={() => setScene((value) => (value === "night" ? "dusk" : "night"))}
+            onScene={() => {
+              const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+              document.documentElement.dataset.theme = next;
+              document.documentElement.style.colorScheme = next;
+              const preference = next === "dark" ? "Dark" : "Light";
+              try {
+                localStorage.setItem(THEME_KEY, preference);
+                const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+                if (saved) localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...saved, theme: preference }));
+              } catch {}
+            }}
             onMenu={() => setMenuOpen(true)}
             onOpenRail={() => setRailOpen((value) => !value)}
             showMenu={isMobile}
-            showRailButton={isDrawer}
+            showRailButton={railAllowed && isDrawer && page !== "overview"}
             railOpen={railShown}
           />
           <div className="hero-inner">
@@ -3050,19 +3222,21 @@ function Shell({ onReplayIntro }) {
         </main>
       </div>
 
-      <EdithRail
-        chat={chat}
-        online={online}
-        isDrawer={isDrawer}
-        open={railShown}
-        onClose={() => setRailOpen(false)}
-        composerRef={composerRef}
-        onSuggest={onSuggest}
-        onViewTask={viewTask}
-        proposal={summary}
-        proposalStale={stale}
-        onReview={reviewChanges}
-      />
+      {railAllowed && (railPersistent || isDrawer) && (
+        <EdithRail
+          chat={chat}
+          online={online}
+          isDrawer={isDrawer}
+          open={railPersistent || railShown}
+          onClose={() => setRailOpen(false)}
+          composerRef={composerRef}
+          onSuggest={onSuggest}
+          onViewTask={viewTask}
+          proposal={summary}
+          proposalStale={stale}
+          onReview={reviewChanges}
+        />
+      )}
       {menuShown && <button type="button" className="scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />}
       {railShown && <button type="button" className="scrim scrim-rail" onClick={() => setRailOpen(false)} aria-label="Close assistant" />}
       {modal && <AddTaskModal onClose={() => setModal(false)} onAdd={addTask} projects={projectNames} />}
@@ -3072,10 +3246,149 @@ function Shell({ onReplayIntro }) {
 
 export default function App() {
   const [entered, setEntered] = useState(false);
+  const [profile, setProfile] = useState(() => readProfile());
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [themeOverride, setThemeOverride] = useState(null);
+  const themePreference = profile?.theme || (() => {
+    try { return localStorage.getItem(THEME_KEY) || "System"; }
+    catch { return "System"; }
+  })();
+
+  const activeTheme = themeOverride || themePreference;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = () => {
+      const dark = activeTheme === "Dark" ||
+        (activeTheme === "System" && media.matches);
+      root.dataset.theme = dark ? "dark" : "light";
+      root.style.colorScheme = dark ? "dark" : "light";
+    };
+
+    applyTheme();
+    if (activeTheme === "System") {
+      media.addEventListener?.("change", applyTheme);
+      return () => media.removeEventListener?.("change", applyTheme);
+    }
+  }, [activeTheme]);
+
+  function handleThemeToggle() {
+    const current = document.documentElement.dataset.theme;
+    const next = current === "dark" ? "Light" : "Dark";
+    setThemeOverride(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+      if (profile) {
+        const updated = { ...profile, theme: next };
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+        setProfile(updated);
+      }
+    } catch {
+      // Keep the theme change for this session if storage is unavailable.
+    }
+  }
+
+  function handleManageProfiles() {
+    let profiles = [];
+    try {
+      profiles = JSON.parse(localStorage.getItem("edith-profiles-v1") || "[]");
+    } catch {}
+
+    const current = readProfile();
+    if (current) {
+      current.id = current.id || "default";
+      if (!profiles.some((item) => item.id === current.id)) {
+        profiles.push(current);
+      }
+    }
+
+    const menu = [
+      ...profiles.map((item, index) => `${index + 1}. ${item.preferredName} (${item.role})`),
+      "+. Create a new profile",
+    ].join("\\n");
+
+    const choice = window.prompt(`Profiles\\n${menu}\\n\\nEnter a number to switch, or + to create:`);
+    if (choice === null) return;
+
+    if (choice.trim() === "+") {
+      const preferredName = window.prompt("Name for the new profile:");
+      if (!preferredName?.trim()) return;
+      const name = preferredName.trim();
+      const created = {
+        ...DEFAULT_PROFILE,
+        fullName: name,
+        preferredName: name,
+        id: crypto.randomUUID(),
+      };
+      profiles.push(created);
+      localStorage.setItem("edith-profiles-v1", JSON.stringify(profiles));
+      saveProfile(created);
+      PROFILE = { ...created, name: created.preferredName, role: created.role };
+      setProfile(created);
+      setEditingProfile(false);
+      setThemeOverride(null);
+      setEntered(true);
+      return;
+    }
+
+    const index = Number(choice) - 1;
+    if (!Number.isInteger(index) || index < 0 || index >= profiles.length) {
+      window.alert("That profile selection is not valid.");
+      return;
+    }
+
+    const selected = profiles[index];
+    saveProfile(selected);
+    localStorage.setItem("edith-profiles-v1", JSON.stringify(profiles));
+    PROFILE = { ...selected, name: selected.preferredName, role: selected.role };
+    setProfile(selected);
+    setEditingProfile(false);
+    setThemeOverride(null);
+    setEntered(true);
+  }
+
+  function handleSaveProfile(details) {
+    const existing = readProfile();
+    const updated = {
+      ...details,
+      id: details.id || existing?.id || "default",
+    };
+
+    saveProfile(updated);
+    PROFILE = {
+      ...updated,
+      name: updated.preferredName,
+      role: updated.role,
+    };
+
+    setProfile(updated);
+    setEditingProfile(false);
+    setEntered(true);
+  }
+
   if (!entered) return <Intro onEnter={() => setEntered(true)} />;
+
+  if (!profile || editingProfile) {
+    return (
+      <ProfileSetup
+        initialProfile={profile}
+        onSave={handleSaveProfile}
+        onCancel={profile ? () => setEditingProfile(false) : undefined}
+      />
+    );
+  }
+
   return (
     <FocusProvider>
-      <Shell onReplayIntro={() => setEntered(false)} />
+      <Shell
+        theme={themeOverride || profile?.theme || themePreference}
+        onThemeToggle={handleThemeToggle}
+        onReplayIntro={() => setEntered(false)}
+        onEditProfile={() => setEditingProfile(true)}
+        onManageProfiles={handleManageProfiles}
+      />
     </FocusProvider>
   );
 }

@@ -525,3 +525,203 @@
     box-shadow: 0 0 0 5px rgba(163, 40, 29, 0.14);
   }
 }
+
+/* Assistant contrast fixes: prevent pale text on white message bubbles */
+:root[data-theme="dark"] .edith-rail,
+:root[data-theme="dark"] .assistant-rail,
+:root[data-theme="dark"] .chat-panel {
+  background: #171d18 !important;
+  color: #edf3eb !important;
+}
+
+:root[data-theme="dark"] .edith-rail [class*="message"],
+:root[data-theme="dark"] .edith-rail [class*="bubble"],
+:root[data-theme="dark"] .assistant-rail [class*="message"],
+:root[data-theme="dark"] .assistant-rail [class*="bubble"],
+:root[data-theme="dark"] .chat-panel [class*="message"],
+:root[data-theme="dark"] .chat-panel [class*="bubble"] {
+  background: #242d25 !important;
+  color: #edf3eb !important;
+  border-color: rgba(205, 225, 205, 0.15) !important;
+}
+
+:root[data-theme="dark"] .edith-rail input,
+:root[data-theme="dark"] .edith-rail textarea,
+:root[data-theme="dark"] .assistant-rail input,
+:root[data-theme="dark"] .assistant-rail textarea,
+:root[data-theme="dark"] .chat-panel input,
+:root[data-theme="dark"] .chat-panel textarea {
+  background: #202820 !important;
+  color: #edf3eb !important;
+  border-color: rgba(205, 225, 205, 0.2) !important;
+}
+
+:root[data-theme="dark"] .edith-rail ::placeholder,
+:root[data-theme="dark"] .assistant-rail ::placeholder,
+:root[data-theme="dark"] .chat-panel ::placeholder {
+  color: #aebcaf !important;
+}
+
+:root[data-theme="dark"] .edith-rail button,
+:root[data-theme="dark"] .assistant-rail button,
+:root[data-theme="dark"] .chat-panel button {
+  color: inherit;
+}
+
+/* Light mode also keeps assistant messages legible */
+:root[data-theme="light"] .edith-rail [class*="message"],
+:root[data-theme="light"] .edith-rail [class*="bubble"],
+:root[data-theme="light"] .assistant-rail [class*="message"],
+:root[data-theme="light"] .assistant-rail [class*="bubble"],
+:root[data-theme="light"] .chat-panel [class*="message"],
+:root[data-theme="light"] .chat-panel [class*="bubble"] {
+  color: #18241b;
+}
+
+/* Chat readability — actual message and composer classes */
+:root[data-theme="dark"] .msg-bot {
+  background: #273229 !important;
+  color: #f1f5ef !important;
+  border-color: #3b4a3d !important;
+}
+:root[data-theme="dark"] .msg-bot p,
+:root[data-theme="dark"] .msg-bot span,
+:root[data-theme="dark"] .msg-bot strong,
+:root[data-theme="dark"] .msg-bot li,
+:root[data-theme="dark"] .msg-bot a {
+  color: #f1f5ef !important;
+}
+:root[data-theme="dark"] .msg-user {
+  background: #285c3a !important;
+  color: #fff !important;
+}
+:root[data-theme="dark"] .composer {
+  background: #202a22 !important;
+  border-color: #435246 !important;
+}
+:root[data-theme="dark"] .composer textarea {
+  background: transparent !important;
+  color: #f1f5ef !important;
+}
+:root[data-theme="dark"] .composer textarea::placeholder {
+  color: #b7c4b8 !important;
+  opacity: 1 !important;
+}
+:root[data-theme="light"] .msg-bot {
+  background: #fff !important;
+  color: #18241b !important;
+}
+:root[data-theme="light"] .msg-bot p,
+:root[data-theme="light"] .msg-bot span,
+:root[data-theme="light"] .msg-bot strong,
+:root[data-theme="light"] .msg-bot li {
+  color: #18241b !important;
+}
+:root[data-theme="light"] .composer textarea {
+  color: #18241b !important;
+}
+:root[data-theme="light"] .composer textarea::placeholder {
+  color: #657066 !important;
+  opacity: 1 !important;
+}
+
+/* EDITH — fully dark assistant chat */
+:root[data-theme="dark"] .assistant-pane {
+  background: #0b0f0c !important;
+  color: #f1f5ef !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .rail-card,
+:root[data-theme="dark"] .assistant-pane .studio-chat,
+:root[data-theme="dark"] .assistant-pane .context-disclosure {
+  background: #111713 !important;
+  color: #f1f5ef !important;
+  border-color: #2c382e !important;
+}
+
+/* EDITH replies */
+:root[data-theme="dark"] .assistant-pane .msg-bot {
+  background: #202822 !important;
+  color: #f1f5ef !important;
+  border: 1px solid #344237 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .msg-bot * {
+  color: #f1f5ef !important;
+}
+
+/* Your messages */
+:root[data-theme="dark"] .assistant-pane .msg-user {
+  background: #205535 !important;
+  color: #ffffff !important;
+  border-color: #326d46 !important;
+}
+
+/* Message composer */
+:root[data-theme="dark"] .assistant-pane .composer {
+  background: #111713 !important;
+  border: 1px solid #354237 !important;
+  color: #f1f5ef !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer textarea {
+  background: transparent !important;
+  color: #f1f5ef !important;
+  caret-color: #8fd5a0 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer textarea::placeholder {
+  color: #a8b6aa !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer button {
+  color: #e5eee6 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer button:disabled {
+  color: #748477 !important;
+}
+
+/* Keep status labels and separators readable */
+:root[data-theme="dark"] .assistant-pane small,
+:root[data-theme="dark"] .assistant-pane time,
+:root[data-theme="dark"] .assistant-pane .muted {
+  color: #aab8ac !important;
+}
+
+
+/* Fixed EDITH rail — dark forest treatment */
+:root[data-theme="dark"] .rail-card {
+  background: #111713 !important;
+  color: #edf3eb !important;
+  border-color: #344237 !important;
+}
+:root[data-theme="dark"] .rail-card .msg-bot {
+  background: #202820 !important;
+  color: #edf3eb !important;
+  border-color: #3a493c !important;
+}
+:root[data-theme="dark"] .rail-card .msg-bot * {
+  color: #edf3eb !important;
+}
+:root[data-theme="dark"] .rail-card .msg-user {
+  background: #205535 !important;
+  color: #ffffff !important;
+}
+:root[data-theme="dark"] .rail-card .composer {
+  background: #111713 !important;
+  border-color: #3a493c !important;
+}
+:root[data-theme="dark"] .rail-card .composer textarea {
+  background: transparent !important;
+  color: #edf3eb !important;
+}
+:root[data-theme="dark"] .rail-card .composer textarea::placeholder {
+  color: #a8b6aa !important;
+  opacity: 1 !important;
+}
+:root[data-theme="dark"] .rail-card .rail-head,
+:root[data-theme="dark"] .rail-card .rail-head * {
+  color: #edf3eb;
+}

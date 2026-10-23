@@ -187,3 +187,129 @@ select:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* EDITH appearance system: preserve forest-green identity in both modes */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0c100d;
+  --card: #171d18;
+  --card-2: #202820;
+  --card-line: rgba(205, 225, 205, 0.13);
+  --text: #edf3eb;
+  --text-2: #c5d0c5;
+  --text-muted: #9aa99b;
+  --green: #69b77d;
+  --green-2: #83cf95;
+  --forest: #102519;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.22), 0 12px 32px rgba(0,0,0,.22);
+  --focus-ring: 0 0 0 2px #101610, 0 0 0 4px #69b77d;
+  --glass: rgba(18, 25, 19, 0.88);
+  --glass-strong: rgba(13, 18, 14, 0.96);
+  --line: rgba(220, 240, 220, 0.13);
+  --line-strong: rgba(220, 240, 220, 0.24);
+}
+
+:root[data-theme="dark"] body {
+  background: var(--paper);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .content,
+:root[data-theme="dark"] .stage {
+  background-color: var(--paper);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .page-card,
+:root[data-theme="dark"] .kpi-card,
+:root[data-theme="dark"] .task-card,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .menu,
+:root[data-theme="dark"] .profile-setup {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--card-line);
+}
+
+:root[data-theme="dark"] .profile-setup-wrap {
+  background: #0c100d !important;
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .profile-setup h1,
+:root[data-theme="dark"] .profile-setup label {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .profile-setup-intro {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="dark"] .profile-setup input,
+:root[data-theme="dark"] .profile-setup select,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+  background-color: #202820;
+  color: var(--text);
+  border-color: var(--card-line);
+}
+
+:root[data-theme="dark"] .profile-setup-submit {
+  background: #28633d !important;
+  color: #fff !important;
+}
+
+:root[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, #090d0a 0%, #101a12 52%, #163321 100%);
+}
+
+:root[data-theme="dark"] .assistant-rail,
+:root[data-theme="dark"] .edith-rail,
+:root[data-theme="dark"] .chat-panel {
+  background-color: #171d18;
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .sidebar-card {
+  border-color: rgba(220, 240, 220, 0.16);
+}
+
+:root[data-theme="dark"] .skip-link {
+  background: #202820;
+  color: #edf3eb;
+}
+
+:root[data-theme="dark"] .app-footer {
+  color: var(--text-muted);
+}
+
+/* Dark theme: readable controls and consistent green identity */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] button,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] select option {
+  background: #171d18;
+  color: #edf3eb;
+}
+
+:root[data-theme="dark"] .nav-item.selected,
+:root[data-theme="dark"] .nav-group-trigger.selected {
+  color: #f2f6ef;
+}
+
+:root[data-theme="dark"] .kpi-card *,
+:root[data-theme="dark"] .page-card *,
+:root[data-theme="dark"] .task-card *,
+:root[data-theme="dark"] .panel * {
+  border-color: var(--card-line);
+}

@@ -6,7 +6,19 @@ const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 export const apiBaseUrl = (
   configuredApiBaseUrl || (import.meta.env.DEV ? "http://127.0.0.1:5050" : "")
 ).replace(/\/+$/, "");
+
 const mcpProtocolVersion = "2025-11-25";
+
+function activeProfileHeaders() {
+  try {
+    const profile = JSON.parse(localStorage.getItem("edith-user-profile-v1") || "null");
+    const id = typeof profile?.id === "string" ? profile.id : "default";
+    return { "X-EDITH-Profile-ID": id };
+  } catch {
+    return { "X-EDITH-Profile-ID": "default" };
+  }
+}
+
 
 function mcpHeaders(method) {
   return {
@@ -18,7 +30,7 @@ function mcpHeaders(method) {
 
 async function request(path, options = {}) {
   const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", ...activeProfileHeaders(), ...(options.headers || {}) },
     ...options,
   });
 
@@ -35,7 +47,7 @@ async function request(path, options = {}) {
 async function mcpRequest(method, params = {}, id = crypto.randomUUID()) {
   const response = await fetch(`${apiBaseUrl}/mcp`, {
     method: "POST",
-    headers: mcpHeaders(method),
+    headers: { ...mcpHeaders(method), ...activeProfileHeaders() },
     body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
   });
   const body = await response.json().catch(() => ({}));
@@ -107,7 +119,7 @@ export const api = {
     });
     await fetch(`${apiBaseUrl}/mcp`, {
       method: "POST",
-      headers: mcpHeaders("notifications/initialized"),
+      headers: { ...mcpHeaders("notifications/initialized"), ...activeProfileHeaders() },
       body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }),
     });
     const toolList = await mcpRequest("tools/list");

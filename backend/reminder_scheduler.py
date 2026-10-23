@@ -11,12 +11,23 @@ DATABASE_PATH = Path(
 )
 
 
-def check_due_reminders():
+def database_paths():
+    """Return the original database and all isolated profile databases."""
+    paths = [DATABASE_PATH]
+    profile_dir = BASE_DIR / "profile_databases"
+    if profile_dir.exists():
+        paths.extend(sorted(profile_dir.glob("*.sqlite3")))
+    return paths
+
+
+def check_due_reminders(database_path=None):
     """Deliver due reminders once and return the number delivered."""
     delivered = 0
+    if database_path is None:
+        database_path = DATABASE_PATH
     now = datetime.now(timezone.utc)
 
-    with sqlite3.connect(DATABASE_PATH, timeout=10) as conn:
+    with sqlite3.connect(database_path, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA busy_timeout = 10000")
 
@@ -97,8 +108,9 @@ def check_due_reminders():
 async def reminder_scheduler_loop(interval_seconds=15):
     """Check for due reminders periodically while the backend is running."""
     while True:
-        try:
-            check_due_reminders()
-        except Exception as exc:
-            print(f"EDITH reminder scheduler error: {exc}")
+        for database_path in database_paths():
+            try:
+                check_due_reminders(database_path)
+            except Exception as exc:
+                print(f"EDITH reminder scheduler error for {database_path.name}: {exc}")
         await asyncio.sleep(interval_seconds)

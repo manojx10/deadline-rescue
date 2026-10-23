@@ -1,5 +1,7 @@
 import json
 import asyncio
+from contextvars import ContextVar
+import re
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from hmac import compare_digest
@@ -256,6 +258,26 @@ async def protect_public_endpoints(request: Request, call_next):
                 **{"Retry-After": str(retry_after)},
             )
 
+    profile_id = request.headers.get("x-edith-profile-id", "default")
+    if not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", profile_id):
+        return _security_error(request, 400, "Invalid profile identifier.")
+
+    if path.startswith("/api/") or path == "/mcp":
+        if profile_id == "default":
+            database_path = DATABASE_PATH
+        else:
+            profile_dir = BASE_DIR / "profile_databases"
+            profile_dir.mkdir(parents=True, exist_ok=True)
+            database_path = profile_dir / f"{profile_id}.sqlite3"
+
+        token = ACTIVE_DATABASE_PATH.set(database_path)
+        try:
+            initialize_database()
+            response = await call_next(request)
+            return _add_security_headers(response, request)
+        finally:
+            ACTIVE_DATABASE_PATH.reset(token)
+
     return _add_security_headers(await call_next(request), request)
 
 
@@ -263,8 +285,12 @@ async def protect_public_endpoints(request: Request, call_next):
 # DATABASE
 # --------------------------------------------------
 
+ACTIVE_DATABASE_PATH = ContextVar("edith_database_path", default=None)
+
+
 def get_connection():
-    connection = sqlite3.connect(DATABASE_PATH, timeout=10)
+    database_path = ACTIVE_DATABASE_PATH.get() or DATABASE_PATH
+    connection = sqlite3.connect(database_path, timeout=10)
     connection.row_factory = sqlite3.Row
     # A second request can legitimately wait for the duplicate guard's short
     # write transaction. Keep SQLite's wait budget aligned with the connection

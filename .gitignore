@@ -57,3 +57,10 @@ frontend/src/*.voice-prepatch-backup
 
 # Local working notes — do not publish
 /README-PATCH.txt
+/backend/profile_databases/
+*.pre-profiles
+*.autoscroll-backup
+*.layout-profile-backup
+*.local-backup
+*.pre-ui-fix
+*.rail-fix-backup
