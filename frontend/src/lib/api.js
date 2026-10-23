@@ -1,6 +1,11 @@
 import { apiTaskToView, viewTaskToApiPayload } from "./taskAdapter";
 
-export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5050").replace(/\/+$/, "");
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+// Local Vite development talks to the FastAPI port. Production can be served
+// behind the same-origin private-preview proxy, so no browser token is needed.
+export const apiBaseUrl = (
+  configuredApiBaseUrl || (import.meta.env.DEV ? "http://127.0.0.1:5050" : "")
+).replace(/\/+$/, "");
 const mcpProtocolVersion = "2025-11-25";
 
 function mcpHeaders(method) {

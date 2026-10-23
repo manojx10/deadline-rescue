@@ -1,15 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, ArrowUpRight, Bell, Bot, Brain, CalendarDays, ChartColumn, Check, CheckCircle2,
-  Clock3, Command, EllipsisVertical, Flag, Folder, History, House, LifeBuoy, ListTodo, Menu, Mic,
-  Moon, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Sparkle, Sparkles, SquarePen,
-  StickyNote, Sun, Target, Trash2, TrendingUp, TriangleAlert, Volume2, VolumeX, X,
+  ArrowRight,  ArrowUpRight, Bell, Bot, Brain, CalendarDays, ChartColumn, Check, CheckCircle2,
+  ChevronRight, Circle, Clock3, Coffee, Command, EllipsisVertical, Flag, Folder, History, House,
+  LifeBuoy, ListTodo, Menu, Mic, Moon, Pause, Play, Plus, RotateCcw, Search, Send, Settings,
+  Sparkle, Sparkles, SquarePen, StickyNote, Sun, Target, Trash2, TrendingUp, TriangleAlert,
+  Volume2, VolumeX, X,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import "./App.css";
 import "./assistant.css";
-import { api, apiBaseUrl } from "./lib/api";
+import { api } from "./lib/api";
 import { apiTaskToView, formatDateTime } from "./lib/taskAdapter";
 
 /* ------------------------------------------------------------------ */
@@ -18,7 +17,7 @@ import { apiTaskToView, formatDateTime } from "./lib/taskAdapter";
 
 // There is no profile endpoint in the backend, so the person shown in the
 // greeting and sidebar lives here. Edit these two values to change it.
-const PROFILE = { name: "Manoj", role: "Student · CSE" };
+const PROFILE = { name: "Manoj", role: "CSE Student" };
 
 const CHAT_KEY = "edith-chat-history-v1";
 const MINUTES_KEY = "edith-available-minutes";
@@ -27,15 +26,20 @@ const LEGACY_GREETING =
   "Hey, I’m EDITH. What would you like to get done? I can help plan your time, organize tasks, check deadlines, and save notes you ask me to remember.";
 
 const NAV = [
-  { id: "overview", label: "Overview", icon: House },
-  { id: "tasks", label: "My Tasks", icon: ListTodo },
-  { id: "schedule", label: "Schedule", icon: CalendarDays },
-  { id: "focus", label: "Focus Mode", icon: Target },
-  { id: "rescue", label: "Deadline Rescue", icon: LifeBuoy },
-  { id: "projects", label: "Projects", icon: Folder },
-  { id: "notes", label: "Notes", icon: StickyNote },
-  { id: "analytics", label: "Analytics", icon: ChartColumn },
-  { id: "studio", label: "EDITH Studio", icon: Sparkles },
+  { id: "overview", label: "Home", icon: House },
+  { id: "plan", label: "Plan", icon: ListTodo, children: [
+    { id: "tasks", label: "My Tasks", icon: ListTodo, badge: true },
+    { id: "schedule", label: "Schedule", icon: CalendarDays },
+    { id: "rescue", label: "Deadline Rescue", icon: LifeBuoy },
+  ]},
+  { id: "workspace", label: "Workspace", icon: Folder, children: [
+    { id: "projects", label: "Projects", icon: Folder },
+    { id: "notes", label: "Notes", icon: StickyNote },
+  ]},
+  { id: "edith-ai", label: "EDITH AI", icon: Sparkles, children: [
+    { id: "studio", label: "Assistant", icon: Bot },
+    { id: "analytics", label: "Analytics", icon: ChartColumn },
+  ]},
 ];
 
 const PAGE_TITLES = {
@@ -46,19 +50,13 @@ const PAGE_TITLES = {
   projects: ["Projects", "Every task, grouped by where it belongs."],
   notes: ["Notes", "Things EDITH remembers for you."],
   analytics: ["Analytics", "What your saved tasks say about your week."],
-  studio: ["EDITH Studio", "Conversation, memory and the Alexa+ simulator."],
+  studio: ["EDITH Assistant", "Conversation, memory and the Alexa+ simulator."],
 };
 
 const MINUTE = 60000;
 const HOUR = 3600000;
 const DAY = 86400000;
 
-const QUOTES = [
-  "A focused hour today saves a stressful tomorrow.",
-  "One honest hour beats three anxious ones.",
-  "Start with the task you keep avoiding.",
-  "Progress is quieter than panic, and it lasts longer.",
-];
 
 const PRIORITY_RANK = { Urgent: 0, High: 1, Medium: 2, Low: 3 };
 
@@ -164,7 +162,7 @@ function pickFocusTask(openTasks, plan, preferredId) {
 
 function friendlyError(error, fallback = "Something went wrong. Please try again.") {
   if (error instanceof TypeError) {
-    return `EDITH can't reach the Deadline Rescue backend. Check that it is running at ${apiBaseUrl}.`;
+    return "EDITH can't reach the Deadline Rescue backend. Check that it is running on 127.0.0.1:5050.";
   }
   return error?.message || fallback;
 }
@@ -557,64 +555,49 @@ function useEdithChat({ refreshTasks }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Cinematic startup                                                   */
+/* Intro                                                              */
 /* ------------------------------------------------------------------ */
 
-function CinematicIntro({ onComplete }) {
-  const [leaving, setLeaving] = useState(false);
-  const hasCompleted = useRef(false);
-  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-
-  const complete = useCallback(() => {
-    if (hasCompleted.current) return;
-    hasCompleted.current = true;
-    onComplete();
-  }, [onComplete]);
+function Intro({ onEnter }) {
+  const [awake, setAwake] = useState(false);
 
   useEffect(() => {
-    if (reducedMotion) {
-      const timer = window.setTimeout(complete, 0);
-      return () => window.clearTimeout(timer);
-    }
-    const departureTimer = window.setTimeout(() => setLeaving(true), 3600);
-    const completionTimer = window.setTimeout(complete, 4300);
-    return () => {
-      window.clearTimeout(departureTimer);
-      window.clearTimeout(completionTimer);
-    };
-  }, [complete, reducedMotion]);
-
-  const skip = () => {
-    setLeaving(true);
-    window.setTimeout(complete, 180);
-  };
+    const timer = setTimeout(() => setAwake(true), 120);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <main className={`cinematic-intro ${leaving ? "cinematic-intro-leaving" : ""}`}>
-      <video
-        className="cinematic-video"
-        src="/sea-storm.mp4"
-        poster="/edith-dashboard-background.png"
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        aria-hidden="true"
-      />
-      <div className="cinematic-scrim" />
-      <div className="cinematic-grain" aria-hidden="true" />
+    <main className={`intro ${awake ? "intro-awake" : ""}`}>
+      <div className="intro-photo" />
+      <div className="intro-shade" />
 
-      <section className="cinematic-copy" aria-label="EDITH startup">
-        <p className="cinematic-kicker">Deadline Rescue</p>
-        <h1 className="cinematic-title">EDITH</h1>
-        <p className="cinematic-subtitle">Your next clear step is waiting.</p>
+      <div className="intro-top">
+        <span className="intro-wordmark">EDITH<small>Deadline Rescue</small></span>
+        <span className="intro-edition">A little more room to breathe</span>
+      </div>
+
+      <section className="intro-main">
+        <div className="intro-copy">
+          <p className="intro-kicker intro-reveal intro-reveal-1">When life gets ahead of you</p>
+          <h1 className="intro-reveal intro-reveal-2">
+            When plans change,<br />
+            find your <em>rhythm.</em>
+          </h1>
+          <p className="intro-description intro-reveal intro-reveal-3">
+            A calmer way to reclaim your time, reset your priorities,
+            and find the next right thing.
+          </p>
+          <button className="intro-button intro-reveal intro-reveal-4" onClick={onEnter}>
+            Enter Deadline Rescue <ArrowUpRight size={17} />
+          </button>
+          <p className="intro-note intro-reveal intro-reveal-5">Less overwhelm. More intention.</p>
+        </div>
       </section>
 
-      <div className="cinematic-bottom">
-
-
-      </div>
-      <span className="cinematic-progress" aria-hidden="true" />
+      <footer className="intro-footer">
+        <span>Make space for what matters</span>
+        <span>Your day, reimagined <ArrowRight size={13} /></span>
+      </footer>
     </main>
   );
 }
@@ -623,31 +606,25 @@ function CinematicIntro({ onComplete }) {
 /* Shared bits                                                        */
 /* ------------------------------------------------------------------ */
 
-function Scene() {
-  return (
-    <div className="scene" aria-hidden="true">
-      <div className="scene-photo" />
-      <div className="scene-glow" />
-      <div className="scene-vignette" />
-    </div>
-  );
-}
-
 function Ridgeline() {
   return (
     <svg className="ridge" viewBox="0 0 220 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="ridge-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#34413f" />
-          <stop offset="0.5" stopColor="#7d6446" />
-          <stop offset="1" stopColor="#d99a55" />
+          <stop offset="0" stopColor="#8aa6a0" />
+          <stop offset="0.45" stopColor="#d8b98c" />
+          <stop offset="1" stopColor="#e9a867" />
+        </linearGradient>
+        <linearGradient id="ridge-rock" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#c9a77a" />
+          <stop offset="1" stopColor="#6c5a41" />
         </linearGradient>
       </defs>
       <rect width="220" height="260" fill="url(#ridge-sky)" />
-      <circle cx="158" cy="118" r="26" fill="#f3c98a" opacity="0.35" />
-      <path d="M0 150 L30 118 L56 140 L92 92 L122 130 L152 104 L186 134 L220 110 V260 H0Z" fill="#56503f" opacity="0.75" />
-      <path d="M0 186 L40 150 L72 174 L112 138 L152 172 L192 148 L220 166 V260 H0Z" fill="#33402f" />
-      <path d="M0 226 L52 196 L96 216 L142 188 L186 210 L220 198 V260 H0Z" fill="#18221a" />
+      <circle cx="170" cy="96" r="22" fill="#fff1cf" opacity="0.55" />
+      <path d="M0 160 L36 118 L64 142 L104 70 L132 118 L158 96 L190 132 L220 108 V260 H0Z" fill="#8c7a63" opacity="0.7" />
+      <path d="M0 196 L44 150 L84 120 L118 168 L156 140 L196 176 L220 160 V260 H0Z" fill="url(#ridge-rock)" />
+      <path d="M0 232 L58 202 L104 224 L152 196 L200 222 L220 212 V260 H0Z" fill="#2c3a28" />
     </svg>
   );
 }
@@ -698,14 +675,15 @@ function Panel({ title, action, className = "", children, ...rest }) {
 /* Sidebar                                                            */
 /* ------------------------------------------------------------------ */
 
-function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro }) {
+function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro, openCount }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState(() => ["tasks", "schedule", "rescue"].includes(page) ? "plan" : ["projects", "notes"].includes(page) ? "workspace" : ["studio", "analytics"].includes(page) ? "edith-ai" : "");
   const settingsRef = useRef(null);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   useDismiss(settingsRef, settingsOpen, closeSettings);
 
   return (
-    <aside className={`sidebar glass ${open ? "sidebar-open" : ""}`} id="sidebar" aria-label="Sidebar" inert={inert}>
+    <aside className={`sidebar ${open ? "sidebar-open" : ""}`} id="sidebar" aria-label="Sidebar" inert={inert}>
       <div className="brand">
         <span className="brand-mark" aria-hidden="true"><Sparkle size={22} strokeWidth={1.6} /></span>
         <div className="brand-text">
@@ -716,19 +694,66 @@ function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro }
       </div>
 
       <nav className="side-nav" aria-label="Primary">
-        {NAV.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            className={`nav-item ${page === id ? "selected" : ""}`}
-            aria-current={page === id ? "page" : undefined}
-            onClick={() => onNavigate(id)}
-            title={label}
-          >
-            <Icon size={18} strokeWidth={1.6} aria-hidden="true" />
-            <span>{label}</span>
-          </button>
-        ))}
+        {NAV.map(({ id, label, icon: Icon, badge, children }) => {
+          const childActive = children?.some((item) => item.id === page) ?? false;
+          const active = page === id || childActive;
+          const expanded = Boolean(children && (expandedGroup === id || childActive));
+
+          if (!children) {
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`nav-item ${page === id ? "selected" : ""}`}
+                aria-current={page === id ? "page" : undefined}
+                onClick={() => onNavigate(id)}
+                title={label}
+              >
+                <Icon size={19} strokeWidth={1.6} aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            );
+          }
+
+          return (
+            <div className={`nav-group ${active ? "group-active" : ""}`} key={id}>
+              <button
+                type="button"
+                className={`nav-item nav-group-trigger ${active ? "selected" : ""}`}
+                aria-expanded={expanded}
+                onClick={() => setExpandedGroup((current) => current === id ? "" : id)}
+                title={label}
+              >
+                <Icon size={19} strokeWidth={1.6} aria-hidden="true" />
+                <span>{label}</span>
+                {id === "plan" && openCount > 0 && (
+                  <b className="nav-badge" title={`${openCount} open`}>{openCount}</b>
+                )}
+                <ChevronRight size={15} className={`nav-chevron ${expanded ? "is-expanded" : ""}`} aria-hidden="true" />
+              </button>
+              {expanded && (
+                <div className="nav-submenu">
+                  {children.map(({ id: childId, label: childLabel, icon: ChildIcon, badge: childBadge }) => (
+                    <button
+                      key={childId}
+                      type="button"
+                      className={`nav-item nav-subitem ${page === childId ? "selected" : ""}`}
+                      aria-current={page === childId ? "page" : undefined}
+                      onClick={() => onNavigate(childId)}
+                      title={childLabel}
+                    >
+                      <ChildIcon size={16} strokeWidth={1.6} aria-hidden="true" />
+                      <span>{childLabel}</span>
+                      {childBadge && openCount > 0 && (
+                        <b className="nav-badge" title={`${openCount} open`}>{openCount}</b>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       <figure className="sidebar-card">
@@ -772,30 +797,23 @@ function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro }
 }
 
 /* ------------------------------------------------------------------ */
-/* Top bar and command bar                                            */
+/* Top bar (over the hero) and command bar                            */
 /* ------------------------------------------------------------------ */
 
-function TopBar({ now, risks, risksLoading, scene, onScene, onMenu, onOpenRail, showMenu, showRailButton, railOpen }) {
+function TopBar({ risks, risksLoading, scene, onScene, onMenu, onOpenRail, showMenu, showRailButton, railOpen }) {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   const closeBell = useCallback(() => setBellOpen(false), []);
   useDismiss(bellRef, bellOpen, closeBell);
-
-  const date = new Date(now).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-  const time = new Date(now).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   const count = risks?.length ?? 0;
 
   return (
-    <header className="topbar">
+    <div className="topbar">
       {showMenu && (
         <button type="button" className="icon-button topbar-menu" onClick={onMenu} aria-label="Open menu" aria-controls="sidebar">
           <Menu size={20} />
         </button>
       )}
-      <div className="clock">
-        <span className="clock-date">{date}</span>
-        <span className="clock-time">{time}</span>
-      </div>
       <div className="topbar-actions">
         <button
           type="button"
@@ -805,7 +823,7 @@ function TopBar({ now, risks, risksLoading, scene, onScene, onMenu, onOpenRail, 
           aria-label={scene === "night" ? "Switch to dusk lighting" : "Switch to night lighting"}
           title={scene === "night" ? "Dusk lighting" : "Night lighting"}
         >
-          {scene === "night" ? <Moon size={19} /> : <Sun size={19} />}
+          {scene === "night" ? <Moon size={20} /> : <Sun size={20} />}
         </button>
         <div className="bell-wrap" ref={bellRef}>
           <button
@@ -816,7 +834,7 @@ function TopBar({ now, risks, risksLoading, scene, onScene, onMenu, onOpenRail, 
             aria-haspopup="dialog"
             onClick={() => setBellOpen((value) => !value)}
           >
-            <Bell size={19} />
+            <Bell size={20} />
             {count > 0 && <span className="bell-dot" aria-hidden="true" />}
           </button>
           {bellOpen && (
@@ -843,7 +861,7 @@ function TopBar({ now, risks, risksLoading, scene, onScene, onMenu, onOpenRail, 
           </button>
         )}
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -851,7 +869,7 @@ function CommandBar({ onAsk, onNewTask, inputRef }) {
   const [value, setValue] = useState("");
   return (
     <form
-      className="command glass"
+      className="command"
       role="search"
       onSubmit={(event) => {
         event.preventDefault();
@@ -866,7 +884,7 @@ function CommandBar({ onAsk, onNewTask, inputRef }) {
         ref={inputRef}
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder={"Ask EDITH anything… “plan 2 hours”, “what should I work on?”, “check deadline risks”"}
+        placeholder={"Ask EDITH… “plan 2 hours”, “check deadline risks”"}
         aria-label="Ask EDITH"
         maxLength={2000}
       />
@@ -883,10 +901,11 @@ function CommandBar({ onAsk, onNewTask, inputRef }) {
 /* ------------------------------------------------------------------ */
 
 const SUGGESTIONS = [
-  { id: "plan", label: "Plan my day for 3 hours", icon: Clock3, kind: "send" },
-  { id: "now", label: "What should I work on now?", icon: Target, kind: "send" },
-  { id: "deadlines", label: "Show my upcoming deadlines", icon: CalendarDays, kind: "local" },
+  { id: "deadlines", label: "Show my upcoming deadlines", icon: Clock3, kind: "local" },
   { id: "add", label: "Add a task for tomorrow", icon: SquarePen, kind: "prefill" },
+  { id: "plan", label: "Plan my day for 3 hours", icon: CalendarDays, kind: "send" },
+  { id: "now", label: "What should I work on now?", icon: Target, kind: "send" },
+  { id: "risks", label: "Check deadline risks", icon: TriangleAlert, kind: "send" },
 ];
 
 function dayLabel(ts, nowMs) {
@@ -984,11 +1003,7 @@ function ChatMessage({ message, now, onViewTask }) {
       <span className="sr-only">{isUser ? "You said" : "EDITH said"}</span>
       <p>
         {message.task && <CheckCircle2 className="msg-check" size={17} aria-label="Task saved" />}
-        {isUser ? message.text : (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {message.text ?? ""}
-          </ReactMarkdown>
-        )}
+        {message.text}
       </p>
       {message.task && <TaskAddedCard task={message.task} now={now} onView={onViewTask} />}
       {message.data !== undefined && message.data !== null && <ChatData data={message.data} now={now} />}
@@ -1087,7 +1102,7 @@ function ChatComposer({ chat, textareaRef }) {
   );
 }
 
-function EdithRail({ chat, online, isDrawer, open, onClose, composerRef, onSuggest, onViewTask }) {
+function EdithRail({ chat, online, isDrawer, open, onClose, composerRef, onSuggest, onViewTask, proposal, proposalStale, onReview }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const scrollRef = useRef(null);
@@ -1108,15 +1123,17 @@ function EdithRail({ chat, online, isDrawer, open, onClose, composerRef, onSugge
       aria-label="EDITH assistant"
       inert={isDrawer && !open}
     >
-      <div className="rail-card glass">
+      <div className="rail-card">
         <header className="rail-head">
-          <span className="rail-avatar" aria-hidden="true"><Sparkle size={20} strokeWidth={1.7} /></span>
+          <span className="rail-avatar" aria-hidden="true"><Sparkle size={22} strokeWidth={1.6} /></span>
           <div className="rail-id">
-            <strong>EDITH <Sparkles size={14} aria-hidden="true" /></strong>
-            <small>Your AI Productivity Agent</small>
-            <span className={`status ${online ? "status-on" : "status-off"}`} role="status">
-              <i aria-hidden="true" /> {online ? "Online" : "Backend offline"}
-            </span>
+            <div className="rail-title">
+              <strong>EDITH</strong>
+              <span className={`status ${online ? "status-on" : "status-off"}`} role="status">
+                <i aria-hidden="true" /> {online ? "Online" : "Offline"}
+              </span>
+            </div>
+            <small>Your AI Study Assistant</small>
           </div>
           <div className="rail-menu-wrap" ref={menuRef}>
             <button
@@ -1147,15 +1164,41 @@ function EdithRail({ chat, online, isDrawer, open, onClose, composerRef, onSugge
         </header>
 
         <div className="rail-scroll" ref={scrollRef}>
-          <section className="greeting-card">
-            <strong>Hey {PROFILE.name}! <span aria-hidden="true">👋</span></strong>
-            <p>I'm EDITH. I can help you plan your tasks, check deadlines, break work into focus sessions, or just answer any questions.</p>
-          </section>
+          {proposal ? (
+            <section className="proposal-card" aria-label="Recovered plan summary">
+              <h2>{proposalStale ? "That plan is out of date." : "I rebuilt your plan."}</h2>
+              <p>
+                {proposalStale
+                  ? "Your tasks or available time changed after I built it. Rebuild it from the Today panel to refresh."
+                  : `After losing ${proposal.disruption} minutes, I replanned ${proposal.scheduled} ${proposal.scheduled === 1 ? "task" : "tasks"}${proposal.deferred ? ` and set ${proposal.deferred} aside for later` : ""}.`}
+              </p>
+              {!proposalStale && (
+              <div className="did">
+                <strong>Here's what I did:</strong>
+                <ul>
+                  <li><CheckCircle2 size={18} aria-hidden="true" /> Checked your tasks ({proposal.openCount} open)</li>
+                  <li><CheckCircle2 size={18} aria-hidden="true" /> Compared available time ({proposal.after} of {proposal.available} min left)</li>
+                  <li><CheckCircle2 size={18} aria-hidden="true" /> Drafted a revised plan ({proposal.scheduled} scheduled)</li>
+                </ul>
+              </div>
+              )}
+              <div className="proposal-actions">
+                <button type="button" className="button-outline" onClick={onReview}>Review changes</button>
+              </div>
+            </section>
+          ) : (
+            <section className="greeting-card">
+              <h2>Hey {PROFILE.name}, I'm EDITH.</h2>
+              <p>I can help you plan your tasks, check deadlines, break work into focus sessions, or just answer a question.</p>
+            </section>
+          )}
 
           <div className="suggestions" role="group" aria-label="Suggested commands">
             {SUGGESTIONS.map(({ id, label, icon: Icon, kind }) => (
               <button type="button" key={id} className="suggestion" disabled={chat.busy && kind === "send"} onClick={() => onSuggest(id, kind, label)}>
-                <Icon size={17} aria-hidden="true" /> {label}
+                <Icon size={17} aria-hidden="true" />
+                <span>{label}</span>
+                <ChevronRight size={17} aria-hidden="true" />
               </button>
             ))}
           </div>
@@ -1283,8 +1326,10 @@ function FocusRing({ taskId, size = "md" }) {
         />
       </svg>
       <div className="ring-core">
-        <span className="ring-time" role="timer" aria-label="Time remaining">{formatTimer(focus.remaining)}</span>
-        <span className="ring-label">{RING_LABELS[focus.status]}</span>
+        <span className="ring-time" role="timer" aria-label="Time remaining">
+          {size === "sm" && focus.status === "idle" ? focus.minutes : formatTimer(focus.remaining)}
+        </span>
+        <span className="ring-label">{size === "sm" ? (focus.status === "idle" ? "minutes" : focus.status === "running" ? "remaining" : RING_LABELS[focus.status].toLowerCase()) : RING_LABELS[focus.status]}</span>
         <button
           type="button"
           className="ring-play"
@@ -1338,8 +1383,66 @@ function FocusControls({ task, onToggleTask, onPlan }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Dashboard cards                                                    */
+/* Dashboard (overview)                                               */
 /* ------------------------------------------------------------------ */
+
+const BUDGETS = [60, 120, 180, 240, 360, 480];
+const PRIORITY_KEYS = ["urgent", "high", "medium", "low"];
+const prioKey = (priority) => {
+  const key = String(priority).toLowerCase();
+  return PRIORITY_KEYS.includes(key) ? key : "medium";
+};
+const pluralize = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+
+function HeroCopy({ now, risks, plan }) {
+  const known = Boolean(risks.data);
+  const count = risks.data?.length ?? 0;
+  const ok = known && count === 0;
+  const headline = !known ? "Checking your deadlines…" : ok ? "You're on track" : `${pluralize(count, "deadline")} ${count === 1 ? "needs" : "need"} attention`;
+  const detail = !known
+    ? "One moment while EDITH reads your tasks."
+    : ok
+      ? plan.data ? `${plan.data.scheduled_minutes} of ${plan.data.available_minutes} minutes are planned today.` : "No deadline risks right now."
+      : "Check Deadline Risk below, or rebuild your plan.";
+  const date = new Date(now).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const time = new Date(now).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  return (
+    <div className="hero-copy">
+      <p className="hero-greeting">{greetingFor(now)}, {PROFILE.name}</p>
+      <h1>Your day,<br /><em>understood.</em></h1>
+      <div className={`hero-status ${ok ? "is-ok" : known ? "is-alert" : ""}`} role="status">
+        <i aria-hidden="true" />
+        <div>
+          <strong>{headline}</strong>
+          <span>{detail}</span>
+        </div>
+      </div>
+      <p className="hero-script" aria-hidden="true">“Small steps add up.”</p>
+      <p className="hero-date"><CalendarDays size={15} aria-hidden="true" /> {date} <span>{time}</span></p>
+    </div>
+  );
+}
+
+function Spark({ values, tone, label }) {
+  const max = Math.max(1, ...values);
+  return (
+    <span className={`spark spark-${tone}`} title={label} aria-hidden="true">
+      {values.map((value, index) => (
+        <i key={index} className={value === 0 ? "is-zero" : ""} style={{ height: `${Math.max(16, Math.round((value / max) * 100))}%` }} />
+      ))}
+    </span>
+  );
+}
+
+function dueBuckets(tasks, nowMs, days = 5) {
+  return Array.from({ length: days }, (_, index) => {
+    const day = new Date(nowMs);
+    day.setDate(day.getDate() + index);
+    const key = localDate(day);
+    return tasks.filter((task) => task.date === key);
+  });
+}
 
 function KpiRow({ tasks, openTasks, plan, risks, now, loading }) {
   const completed = tasks.filter((task) => task.done).length;
@@ -1349,31 +1452,35 @@ function KpiRow({ tasks, openTasks, plan, risks, now, loading }) {
   const available = plan.data?.available_minutes;
   const percent = Number.isFinite(scheduled) && available > 0 ? clamp(Math.round((scheduled / available) * 100), 0, 100) : 0;
   const attention = risks.data?.length;
+  const riskIds = new Set((risks.data ?? []).map((risk) => risk.task_id));
+  const buckets = dueBuckets(openTasks, now);
 
   return (
     <section className="kpi-row" aria-label="Summary">
-      <article className="kpi glass kpi-mint">
-        <span className="kpi-icon" aria-hidden="true"><ListTodo size={22} strokeWidth={1.6} /></span>
+      <article className="kpi kpi-green">
+        <span className="kpi-icon" aria-hidden="true"><CheckCircle2 size={22} strokeWidth={1.5} /></span>
         <div className="kpi-body">
           <p className="kpi-value">{loading ? "—" : tasks.length}</p>
           <p className="kpi-label">Total tasks</p>
-          <p className="kpi-note tone-calm">{loading ? "Loading…" : `${completed} completed`}</p>
+          <p className="kpi-note">{loading ? "Loading…" : `${completed} completed`}</p>
         </div>
+        <Spark values={buckets.map((list) => list.length)} tone="green" label="Open tasks due over the next 5 days" />
       </article>
 
-      <article className="kpi glass kpi-coral">
-        <span className="kpi-icon" aria-hidden="true"><TriangleAlert size={22} strokeWidth={1.6} /></span>
+      <article className="kpi kpi-red">
+        <span className="kpi-icon" aria-hidden="true"><TriangleAlert size={22} strokeWidth={1.5} /></span>
         <div className="kpi-body">
           <p className="kpi-value">{risks.data ? attention : "—"}</p>
           <p className="kpi-label">Need attention</p>
-          <p className={`kpi-note ${risks.error ? "tone-warm" : attention ? "tone-soon" : "tone-calm"}`}>
-            {risks.error ? "Couldn't check" : !risks.data ? "Checking…" : attention ? "Deadlines at risk" : "All clear"}
+          <p className={`kpi-note ${attention || risks.error ? "is-red" : ""}`}>
+            {risks.error ? "Couldn't check" : !risks.data ? "Checking…" : attention ? "Deadlines coming soon" : "All clear"}
           </p>
         </div>
+        <Spark values={buckets.map((list) => list.filter((task) => riskIds.has(task.id)).length)} tone="red" label="At-risk tasks due over the next 5 days" />
       </article>
 
-      <article className="kpi glass kpi-sun">
-        <span className="kpi-icon" aria-hidden="true"><Clock3 size={22} strokeWidth={1.6} /></span>
+      <article className="kpi kpi-green">
+        <span className="kpi-icon" aria-hidden="true"><Clock3 size={22} strokeWidth={1.5} /></span>
         <div className="kpi-body">
           <p className="kpi-value">
             {plan.data ? scheduled : "—"}<span className="kpi-of"> / {plan.data ? available : "—"}</span>
@@ -1388,146 +1495,350 @@ function KpiRow({ tasks, openTasks, plan, risks, now, loading }) {
         </div>
       </article>
 
-      <article className="kpi glass kpi-mint">
-        <span className="kpi-icon" aria-hidden="true"><CalendarDays size={22} strokeWidth={1.6} /></span>
+      <article className="kpi kpi-green">
+        <span className="kpi-icon" aria-hidden="true"><TrendingUp size={22} strokeWidth={1.5} /></span>
         <div className="kpi-body">
           <p className="kpi-value">{loading ? "—" : next ? nextCountdown.label : "None"}</p>
           <p className="kpi-label">Next deadline</p>
-          <p className={`kpi-note kpi-clip ${next ? `tone-${nextCountdown.tone}` : "tone-calm"}`} title={next?.title}>
-            {loading ? "Loading…" : next ? next.title : "No open tasks"}
-          </p>
+          <p className="kpi-note kpi-clip" title={next?.title}>{loading ? "Loading…" : next ? next.title : "No open tasks"}</p>
         </div>
       </article>
     </section>
   );
 }
 
-function FocusCard({ task, now, loading, onToggleTask, onPlan, onAddTask, onOpenFocus }) {
-  const quote = QUOTES[(Number(task?.id) || 0) % QUOTES.length];
+/* ---------- Today: original plan vs recovered plan ---------- */
+
+function compareRows(original, recovered, hasRecovery) {
+  const byId = new Map(recovered.map((item) => [item.task_id, item]));
+  return original.map((item) => {
+    const match = byId.get(item.task_id);
+    const status = !hasRecovery ? "kept" : !match ? "deferred" : match.start !== item.start ? "moved" : "kept";
+    return { item, status };
+  });
+}
+
+function PlanIcon({ priority }) {
+  const Icon = priority === "urgent" || priority === "high" ? Flag : ListTodo;
+  return <Icon size={17} aria-hidden="true" />;
+}
+
+function summarizeRecovery(recovery, original, openCount) {
+  if (!recovery) return null;
+  const result = recovery.result;
+  const recovered = result.schedule?.schedule ?? [];
+  const rows = compareRows(original, recovered, true);
+  return {
+    disruption: recovery.disruption,
+    available: recovery.available,
+    after: result.available_minutes_after_disruption,
+    scheduled: recovered.length,
+    deferred: result.schedule?.unscheduled?.length ?? 0,
+    moved: rows.filter((row) => row.status === "moved").length,
+    risks: result.deadline_risks?.length ?? 0,
+    openCount,
+  };
+}
+
+function TodayPanel({ plan, recovery, summary, stale, now, available, onAvailable, onRecover, onToggleTask, onOpenRescue }) {
+  const [choice, setChoice] = useState(null);
+  const [lost, setLost] = useState("45");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const hasRecovery = Boolean(recovery);
+  const view = choice ?? (hasRecovery ? "recovered" : "original");
+  const showRecovered = view === "recovered";
+  const original = plan.data?.schedule ?? [];
+  const recovered = recovery?.result.schedule?.schedule ?? [];
+  const rows = compareRows(original, recovered, hasRecovery);
+  const recoveredRows = buildTimeline(recovered, now);
+  const waiting = plan.data?.unscheduled?.length ?? 0;
+  const options = BUDGETS.includes(available) ? BUDGETS : [...BUDGETS, available].sort((a, b) => a - b);
+  const range = (start, end) => `${formatClock(start)} – ${formatClock(end)}`;
+
+  async function rebuild() {
+    setBusy(true);
+    setError("");
+    try {
+      await onRecover(available, Math.max(0, Number(lost) || 0));
+    } catch (requestError) {
+      setError(friendlyError(requestError, "We couldn't rebuild your plan."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <Panel
-      title="Current focus"
-      className="focus-card"
-      action={<button type="button" className="panel-link" onClick={onOpenFocus}>Focus Mode <ArrowRight size={15} aria-hidden="true" /></button>}
-    >
-      {loading ? (
-        <Skeleton lines={4} />
-      ) : !task ? (
-        <EmptyState text="Nothing in focus. Add a task and EDITH will line it up." icon={Target}>
-          <button type="button" className="button-primary" onClick={onAddTask}><Plus size={16} /> Add a task</button>
-        </EmptyState>
-      ) : (
-        <div className="focus-body">
-          <div className="focus-copy">
-            <h3 className="focus-title">{task.title}</h3>
-            <ul className="focus-meta">
-              <li><CalendarDays size={16} aria-hidden="true" /> {dueLabel(task, now)}</li>
-              <li><Clock3 size={16} aria-hidden="true" /> {formatMinutes(task.minutes)}</li>
-              <li><Flag size={16} aria-hidden="true" /> {task.priority}</li>
-            </ul>
-            <p className="focus-quote">“{quote}”</p>
-            <FocusControls task={task} onToggleTask={onToggleTask} onPlan={onPlan} />
-          </div>
-          <div className="focus-visual">
-            <FocusRing taskId={task.id} size="md" />
-            <p className="focus-script" aria-hidden="true">Small steps compound into big results.</p>
+    <section className="today" aria-labelledby="today-title">
+      <header className="today-head">
+        <div className="today-titles">
+          <h2 id="today-title">Today</h2>
+          <p>Your schedule, intelligently organized.</p>
+        </div>
+        <div className="today-tools">
+          <select
+            className="select-pill"
+            aria-label="Time available today"
+            value={available}
+            onChange={(event) => onAvailable(Number(event.target.value))}
+          >
+            {options.map((value) => <option key={value} value={value}>{formatMinutes(value)} available</option>)}
+          </select>
+          <div className="seg" role="group" aria-label="Plan view">
+            <button type="button" aria-pressed={view === "original"} onClick={() => setChoice("original")}>Original Plan</button>
+            <button type="button" aria-pressed={view === "recovered"} onClick={() => setChoice("recovered")}>Recovered Plan</button>
           </div>
         </div>
+      </header>
+
+      {stale && (
+        <p className="today-stale" role="status">
+          <TriangleAlert size={15} aria-hidden="true" /> Your tasks or available time changed since this recovered plan was built. Rebuild it to refresh.
+        </p>
       )}
-    </Panel>
+
+      <div className={`today-body ${showRecovered && hasRecovery ? "is-compare" : "is-single"}`}>
+        <div className="plan-col">
+          <h3 className="sr-only">Original plan</h3>
+          {plan.loading && !plan.data ? (
+            <Skeleton lines={4} />
+          ) : plan.error ? (
+            <InlineError message={plan.error} onRetry={plan.reload} />
+          ) : rows.length === 0 ? (
+            <EmptyState text="Nothing fits yet. Add a task or give EDITH more time." icon={CalendarDays} />
+          ) : (
+            <ol className="orig-list">
+              {rows.map(({ item, status }) => {
+                const key = prioKey(item.priority);
+                const start = new Date(item.start).getTime();
+                const end = new Date(item.end).getTime();
+                return (
+                  <li className={`orig-row is-${status}`} key={`${item.task_id}-${item.start}`}>
+                    <time dateTime={item.start}>{formatClock(start)}</time>
+                    <div className={`block block-${key}`}>
+                      <span className="block-icon"><PlanIcon priority={key} /></span>
+                      <div className="block-text">
+                        <strong title={item.title}>{item.title}{status !== "kept" && <em> ({status})</em>}</strong>
+                        <span>{range(start, end)}</span>
+                      </div>
+                      {status !== "kept" && <span className="block-x" role="img" aria-label={status === "moved" ? "Moved" : "Deferred"}><X size={13} aria-hidden="true" /></span>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+
+        {showRecovered && hasRecovery && (
+          <>
+            <div className="plan-arrow" aria-hidden="true">
+              <svg viewBox="0 0 44 260" preserveAspectRatio="none" focusable="false">
+                <path d="M34 14 C 4 70, 4 190, 34 238" fill="none" stroke="currentColor" strokeWidth="1.6" strokeDasharray="4 5" strokeLinecap="round" />
+                <path d="M25 230 L35 240 L22 243" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="plan-col">
+              <h3 className="sr-only">Recovered plan</h3>
+              {recoveredRows.length === 0 ? (
+                <EmptyState text="No task fits in the time that was left." icon={CalendarDays} />
+              ) : (
+                <ol className="rec-list">
+                  {recoveredRows.map((row) => {
+                    if (row.kind === "break") {
+                      return (
+                        <li className="rec-block is-break" key={row.key}>
+                          <span className="block-icon"><Coffee size={17} aria-hidden="true" /></span>
+                          <div className="block-text"><strong>Short break</strong><span>{range(row.start, row.end)}</span></div>
+                        </li>
+                      );
+                    }
+                    const key = prioKey(row.item.priority);
+                    return (
+                      <li className={`rec-block block-${key}`} key={row.key}>
+                        <span className="block-icon"><PlanIcon priority={key} /></span>
+                        <div className="block-text"><strong title={row.item.title}>{row.item.title}</strong><span>{range(row.start, row.end)}</span></div>
+                        <button type="button" className="block-check" onClick={() => onToggleTask(row.item.task_id)} aria-label={`Mark ${row.item.title} complete`}>
+                          <Circle size={18} aria-hidden="true" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </div>
+            <aside className="plan-card plan-summary" aria-label="Recovery summary">
+              <h3>{stale ? "Plan out of date" : "Plan recovered"}</h3>
+              <p className="summary-big">{summary.disruption}<small> min</small></p>
+              <p className="summary-sub">of lost time absorbed</p>
+              <ul>
+                <li><CheckCircle2 size={17} aria-hidden="true" /> {pluralize(summary.scheduled, "task")} replanned in {summary.after} min</li>
+                {summary.moved > 0 && <li><CheckCircle2 size={17} aria-hidden="true" /> {summary.moved} moved to a new time</li>}
+                {summary.deferred > 0
+                  ? <li className="is-warn"><TriangleAlert size={17} aria-hidden="true" /> {summary.deferred} deferred, not enough time</li>
+                  : <li><CheckCircle2 size={17} aria-hidden="true" /> Nothing had to be dropped</li>}
+                {summary.risks > 0
+                  ? <li className="is-warn"><TriangleAlert size={17} aria-hidden="true" /> {pluralize(summary.risks, "deadline risk")} to watch</li>
+                  : <li><CheckCircle2 size={17} aria-hidden="true" /> No deadline risks</li>}
+              </ul>
+              <button type="button" className="plan-link" onClick={onOpenRescue}>Adjust in Deadline Rescue <ArrowRight size={14} aria-hidden="true" /></button>
+            </aside>
+          </>
+        )}
+
+        {showRecovered && !hasRecovery && (
+          <aside className="plan-card plan-cta">
+            <h3>Lost time today?</h3>
+            <p>Tell EDITH how many minutes got away from you. It rebuilds your plan from your saved tasks, deadlines and priorities.</p>
+            <label>
+              <span>Minutes lost</span>
+              <input type="number" min="0" step="5" value={lost} onChange={(event) => setLost(event.target.value)} />
+            </label>
+            <button type="button" className="button-mint" onClick={rebuild} disabled={busy || available <= 0}>
+              <Sparkles size={16} aria-hidden="true" /> {busy ? "Rebuilding…" : "Build recovered plan"}
+            </button>
+            {error && <InlineError message={error} />}
+            <small>Saves a recovery event, just like the Deadline Rescue page does.</small>
+          </aside>
+        )}
+
+        {!showRecovered && (
+          <aside className="plan-card plan-facts">
+            <h3>Original plan</h3>
+            <p className="summary-big">{plan.data ? plan.data.scheduled_minutes : "—"}<small> min</small></p>
+            <p className="summary-sub">planned of {formatMinutes(available)} available</p>
+            <ul>
+              {plan.data && <li><CheckCircle2 size={17} aria-hidden="true" /> {plan.data.remaining_minutes} min still free</li>}
+              {waiting > 0 && <li className="is-warn"><TriangleAlert size={17} aria-hidden="true" /> {pluralize(waiting, "task")} need another window</li>}
+            </ul>
+            <button type="button" className="plan-link" onClick={() => setChoice("recovered")}>Lost time? Rebuild the plan <ArrowRight size={14} aria-hidden="true" /></button>
+          </aside>
+        )}
+      </div>
+    </section>
   );
 }
 
-function DeadlinesCard({ openTasks, now, loading, onViewAll, onComplete }) {
-  const list = openTasks.slice(0, 5);
+/* ---------- Bottom row ---------- */
+
+const GAUGE = { low: 0.2, medium: 0.55, high: 0.9 };
+
+function RiskCard({ risks, openTasks, now, loading }) {
+  const list = risks.data ?? [];
+  const byId = new Map(openTasks.map((task) => [task.id, task]));
+  const items = list.slice(0, 3).map((risk) => {
+    const task = byId.get(risk.task_id);
+    return { id: risk.task_id ?? risk.title, title: risk.title, when: task ? countdown(task, now) : null };
+  });
+  const late = items.some((item) => item.when?.tone === "late");
+  // Derived label: no risks is low, one or two is medium, three or more (or anything overdue) is high.
+  const level = list.length === 0 ? "low" : list.length >= 3 || late ? "high" : "medium";
+
   return (
-    <Panel
-      title="Upcoming deadlines"
-      className="deadlines-card"
-      action={<button type="button" className="panel-link" onClick={onViewAll}>View all <ArrowRight size={15} aria-hidden="true" /></button>}
-    >
+    <section className="card risk-card" aria-labelledby="risk-title">
+      <header className="card-head">
+        <div>
+          <h2 id="risk-title">Deadline Risk</h2>
+          <p>{loading || !risks.data ? "Checking…" : list.length ? `${pluralize(list.length, "task")} need${list.length === 1 ? "s" : ""} attention` : "Nothing needs attention"}</p>
+        </div>
+      </header>
+      <div className="risk-body">
+        <div className={`gauge gauge-${level}`}>
+          <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+            <circle className="gauge-track" cx="60" cy="60" r="46" pathLength="100" strokeDasharray="75 100" transform="rotate(135 60 60)" />
+            <circle className="gauge-fill" cx="60" cy="60" r="46" pathLength="100" strokeDasharray={`${75 * GAUGE[level]} 100`} transform="rotate(135 60 60)" />
+          </svg>
+          <div className="gauge-core"><strong>{level.toUpperCase()}</strong><span>RISK</span></div>
+        </div>
+        {items.length === 0 ? (
+          <p className="risk-none">{risks.error ? risks.error : "No deadline risks right now."}</p>
+        ) : (
+          <ul className="risk-list">
+            {items.map((item) => (
+              <li key={item.id}>
+                <i className={`dot tone-${item.when?.tone ?? "soon"}`} aria-hidden="true" />
+                <div>
+                  <span title={item.title}>{item.title}</span>
+                  {item.when && <small>{item.when.tone === "late" ? item.when.label : `${item.when.label} left`}</small>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FocusSessionCard({ task, loading, onOpenFocus, onAddTask, onToggleTask }) {
+  const focus = useFocus();
+  const locked = focus.status === "running" || focus.status === "paused";
+  const lengths = [25, 45, 60, 90].includes(focus.minutes) ? [25, 45, 60, 90] : [...[25, 45, 60, 90], focus.minutes].sort((a, b) => a - b);
+
+  return (
+    <section className="card focus-session" aria-labelledby="focus-session-title">
+      <header className="card-head">
+        <h2 id="focus-session-title">Focus Session</h2>
+        <button type="button" className="card-link" onClick={onOpenFocus}>Focus Mode <ArrowRight size={14} aria-hidden="true" /></button>
+      </header>
+      {loading ? (
+        <Skeleton lines={3} />
+      ) : !task ? (
+        <EmptyState text="Nothing to focus on yet." icon={Target}>
+          <button type="button" className="button-dark" onClick={onAddTask}><Plus size={16} /> Add a task</button>
+        </EmptyState>
+      ) : (
+        <div className="fs-body">
+          <FocusRing taskId={task.id} size="sm" />
+          <div className="fs-side">
+            <p className="fs-task" title={task.title}>{task.title}</p>
+            <label className="fs-length">
+              <span className="sr-only">Session length</span>
+              <select className="select-pill" value={focus.minutes} disabled={locked} onChange={(event) => focus.setDuration(Number(event.target.value))}>
+                {lengths.map((value) => <option key={value} value={value}>{value} min</option>)}
+              </select>
+            </label>
+            <FocusControls task={task} onToggleTask={onToggleTask} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CommitmentsCard({ openTasks, now, loading, onViewAll, onComplete }) {
+  const list = openTasks.slice(0, 4);
+  return (
+    <section className="card commit-card" aria-labelledby="commit-title">
+      <header className="card-head">
+        <h2 id="commit-title">Upcoming Commitments</h2>
+        <button type="button" className="card-link" onClick={onViewAll}>View all <ArrowRight size={14} aria-hidden="true" /></button>
+      </header>
       {loading ? (
         <Skeleton lines={4} />
       ) : list.length === 0 ? (
         <EmptyState text="No open deadlines. Enjoy the space." icon={CalendarDays} />
       ) : (
-        <ol className="deadline-list">
+        <ol className="commit-list">
           {list.map((task) => {
             const when = countdown(task, now);
             const ms = dueMs(task);
             return (
-              <li className="deadline" key={task.id}>
-                <div className="deadline-date" aria-hidden="true">
-                  <span>{Number.isFinite(ms) ? new Date(ms).toLocaleDateString("en", { month: "short" }) : "—"}</span>
-                  <strong>{Number.isFinite(ms) ? new Date(ms).getDate() : "–"}</strong>
-                </div>
-                <button type="button" className={`deadline-check tone-${when.tone}`} onClick={() => onComplete(task.id)} aria-label={`Mark ${task.title} complete`}>
-                  <Check size={14} aria-hidden="true" />
+              <li key={task.id}>
+                <button type="button" className={`commit-dot tone-${when.tone}`} onClick={() => onComplete(task.id)} aria-label={`Mark ${task.title} complete`}>
+                  <Check size={13} aria-hidden="true" />
                 </button>
-                <div className="deadline-main">
-                  <strong title={task.title}>{task.title}</strong>
-                  <span>{formatMinutes(task.minutes)} · {task.priority}</span>
-                </div>
-                <span className={`badge tone-${when.tone}`}>{when.label}</span>
+                <time className={when.tone === "late" || when.tone === "soon" ? "is-hot" : ""} dateTime={task.deadline}>
+                  {Number.isFinite(ms) ? new Date(ms).toLocaleDateString("en", { month: "short", day: "numeric" }) : "—"}
+                </time>
+                <strong title={task.title}>{task.title}</strong>
+                <span>{Number.isFinite(ms) ? formatClock(ms) : ""}</span>
               </li>
             );
           })}
         </ol>
       )}
-    </Panel>
-  );
-}
-
-const BUDGETS = [60, 120, 180, 240, 360, 480];
-
-function PlanCard({ plan, now, available, onAvailable, onViewFull }) {
-  const rows = useMemo(() => buildTimeline(plan.data?.schedule ?? [], now), [plan.data, now]);
-  const activeIndex = rows.findIndex((row) => row.kind === "task" && !row.past);
-  const visible = rows.slice(0, 5);
-  const options = BUDGETS.includes(available) ? BUDGETS : [...BUDGETS, available].sort((a, b) => a - b);
-  const waiting = plan.data?.unscheduled?.length ?? 0;
-
-  return (
-    <Panel
-      title="Today's plan"
-      className="plan-card"
-      action={<button type="button" className="panel-link" onClick={onViewFull}>View full plan <ArrowRight size={15} aria-hidden="true" /></button>}
-    >
-      {plan.loading && !plan.data ? (
-        <Skeleton lines={4} />
-      ) : plan.error ? (
-        <InlineError message={plan.error} onRetry={plan.reload} />
-      ) : rows.length === 0 ? (
-        <EmptyState text="Nothing fits yet. Add a task or give EDITH more time." icon={CalendarDays} />
-      ) : (
-        <ol className="timeline">
-          {visible.map((row, index) =>
-            row.kind === "break" ? (
-              <li className="timeline-item is-break" key={row.key}>
-                <span className="timeline-node" aria-hidden="true" />
-                <time className="timeline-time" dateTime={new Date(row.start).toISOString()}>{formatClock(row.start)} – {formatClock(row.end)}</time>
-                <span className="timeline-title">Break · {row.minutes} min</span>
-              </li>
-            ) : (
-              <li className={`timeline-item ${row.past ? "is-past" : ""} ${index === activeIndex ? "is-active" : ""}`} key={row.key}>
-                <span className="timeline-node" aria-hidden="true" />
-                <time className="timeline-time" dateTime={new Date(row.start).toISOString()}>{formatClock(row.start)} – {formatClock(row.end)}</time>
-                <span className="timeline-title" title={row.item.title}>{row.item.title}</span>
-              </li>
-            ),
-          )}
-        </ol>
-      )}
-      <footer className="plan-foot">
-        <label>
-          <span>Time available</span>
-          <select className="select-pill" value={available} onChange={(event) => onAvailable(Number(event.target.value))}>
-            {options.map((value) => <option key={value} value={value}>{formatMinutes(value)}</option>)}
-          </select>
-        </label>
-        {waiting > 0 && <span className="plan-waiting">{waiting} {waiting === 1 ? "task needs" : "tasks need"} another window</span>}
-      </footer>
-    </Panel>
+    </section>
   );
 }
 
@@ -1584,10 +1895,10 @@ function WeeklyCard({ tasks, now }) {
 }
 
 const PRIORITY_COLORS = [
-  { key: "Urgent", color: "var(--sun)" },
-  { key: "High", color: "var(--coral)" },
-  { key: "Medium", color: "var(--forest-bright)" },
-  { key: "Low", color: "var(--mint)" },
+  { key: "Urgent", color: "var(--c-urgent)" },
+  { key: "High", color: "var(--c-high)" },
+  { key: "Medium", color: "var(--c-medium)" },
+  { key: "Low", color: "var(--c-low)" },
 ];
 
 function BreakdownCard({ tasks }) {
@@ -1655,42 +1966,28 @@ function BreakdownCard({ tasks }) {
 
 function Overview({
   tasks, openTasks, tasksLoading, plan, risks, now, focusTask, available, onAvailable,
-  onToggleTask, onNavigate, onPlanWithEdith, onNewTask,
+  onToggleTask, onNavigate, onNewTask, recovery, summary, stale, onRecover,
 }) {
   return (
     <div className="dash">
-      <header className="hero">
-        <p className="hero-greeting">{greetingFor(now)}, {PROFILE.name}</p>
-        <h1>Turn your plans<br />into <em>progress.</em></h1>
-        <p className="hero-sub">EDITH helps you plan, focus and never miss what matters.</p>
-        <p className="hero-script" aria-hidden="true">Same you,<br />brighter days</p>
-      </header>
-
       <KpiRow tasks={tasks} openTasks={openTasks} plan={plan} risks={risks} now={now} loading={tasksLoading} />
-
-      <div className="dash-row dash-row-top">
-        <FocusCard
-          task={focusTask}
-          now={now}
-          loading={tasksLoading}
-          onToggleTask={onToggleTask}
-          onPlan={onPlanWithEdith}
-          onAddTask={onNewTask}
-          onOpenFocus={() => onNavigate("focus")}
-        />
-        <DeadlinesCard
-          openTasks={openTasks}
-          now={now}
-          loading={tasksLoading}
-          onViewAll={() => onNavigate("tasks")}
-          onComplete={onToggleTask}
-        />
-      </div>
-
+      <TodayPanel
+        key={recovery?.at ?? "none"}
+        plan={plan}
+        recovery={recovery}
+        summary={summary}
+        stale={stale}
+        now={now}
+        available={available}
+        onAvailable={onAvailable}
+        onRecover={onRecover}
+        onToggleTask={onToggleTask}
+        onOpenRescue={() => onNavigate("rescue")}
+      />
       <div className="dash-row dash-row-bottom">
-        <PlanCard plan={plan} now={now} available={available} onAvailable={onAvailable} onViewFull={() => onNavigate("schedule")} />
-        <WeeklyCard tasks={tasks} now={now} />
-        <BreakdownCard tasks={tasks} />
+        <RiskCard risks={risks} openTasks={openTasks} now={now} loading={tasksLoading} />
+        <FocusSessionCard task={focusTask} loading={tasksLoading} onOpenFocus={() => onNavigate("focus")} onAddTask={onNewTask} onToggleTask={onToggleTask} />
+        <CommitmentsCard openTasks={openTasks} now={now} loading={tasksLoading} onViewAll={() => onNavigate("tasks")} onComplete={onToggleTask} />
       </div>
     </div>
   );
@@ -1703,10 +2000,10 @@ function Overview({
 function PageHeader({ page }) {
   const [title, subtitle] = PAGE_TITLES[page];
   return (
-    <header className="page-head">
+    <div className="page-head">
       <h1>{title}</h1>
       <p>{subtitle}</p>
-    </header>
+    </div>
   );
 }
 
@@ -1825,7 +2122,7 @@ function SchedulePage({ tasks }) {
           {unscheduled.map((item) => <p key={item.task.id}><strong>{item.task.title}</strong> — {item.reason}</p>)}
         </div>
       )}
-      {plan && <p className="plan-summary"><Clock3 size={15} aria-hidden="true" /> {plan.scheduled_minutes} of {plan.available_minutes} minutes planned · {plan.remaining_minutes} minutes still open</p>}
+      {plan && <p className="schedule-summary"><Clock3 size={15} aria-hidden="true" /> {plan.scheduled_minutes} of {plan.available_minutes} minutes planned · {plan.remaining_minutes} minutes still open</p>}
     </section>
   );
 }
@@ -1919,10 +2216,10 @@ function FocusPage({ openTasks, focusTask, now, onToggleTask, onNewTask }) {
   );
 }
 
-function RescuePage({ onNavigate }) {
+function RescuePage({ onNavigate, recoveryState, onRecover }) {
   const [available, setAvailable] = useState("120");
   const [disruption, setDisruption] = useState("0");
-  const [recovery, setRecovery] = useState(null);
+  const recovery = recoveryState?.result ?? null;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const fetchHistory = useCallback(() => api.getRecoveryHistory(), []);
@@ -1933,8 +2230,7 @@ function RescuePage({ onNavigate }) {
     setLoading(true);
     setError("");
     try {
-      const result = await api.recover(Math.max(0, Number(available) || 0), Math.max(0, Number(disruption) || 0));
-      setRecovery(result);
+      await onRecover(Math.max(0, Number(available) || 0), Math.max(0, Number(disruption) || 0));
       await historyState.reload();
     } catch (requestError) {
       setError(friendlyError(requestError, "We couldn't rebuild your plan."));
@@ -2206,6 +2502,8 @@ function AnalyticsPage({ tasks, openTasks, now, loading }) {
       </section>
 
       <div className="analytics-grid">
+        <WeeklyCard tasks={tasks} now={now} />
+        <BreakdownCard tasks={tasks} />
         <Panel title="Open work by priority">
           {byPriority.length === 0 ? <p className="muted-line">No open work.</p> : (
             <ul className="meter-list">{byPriority.map(([label, value]) => <MeterRow key={label} label={label} value={value} max={priorityMax} display={formatMinutes(value)} />)}</ul>
@@ -2491,9 +2789,9 @@ function Shell({ onReplayIntro }) {
     return Number.isFinite(saved) && saved >= 0 && saved <= 10080 ? saved : 240;
   });
   const [scene, setScene] = useState(() => (readStored(SCENE_KEY, "dusk") === "night" ? "night" : "dusk"));
+  const [recovery, setRecovery] = useState(null);
   const commandRef = useRef(null);
   const composerRef = useRef(null);
-  const mainRef = useRef(null);
   const isDrawer = useMediaQuery("(max-width: 1279px)");
   const isMobile = useMediaQuery("(max-width: 899px)");
 
@@ -2529,6 +2827,11 @@ function Shell({ onReplayIntro }) {
   const chat = useEdithChat({ refreshTasks });
 
   const signature = useMemo(() => tasks.map((task) => `${task.id}:${task.done}:${task.minutes}:${task.deadline}`).join("|"), [tasks]);
+  const runRecovery = useCallback(async (availableMinutes, disruptionMinutes) => {
+    const result = await api.recover(availableMinutes, disruptionMinutes);
+    setRecovery({ result, available: availableMinutes, disruption: disruptionMinutes, at: Date.now(), signature });
+    return result;
+  }, [signature]);
   const fetchPlan = useCallback(() => api.getSchedule(available), [available]);
   const fetchRisks = useCallback(() => api.getDeadlineRisks(), []);
   const plan = useRemote(fetchPlan, signature, !tasksLoading);
@@ -2588,7 +2891,6 @@ function Shell({ onReplayIntro }) {
     setPage(id);
     setMenuOpen(false);
     setRailOpen(false);
-    mainRef.current?.scrollTo({ top: 0 });
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -2645,100 +2947,124 @@ function Shell({ onReplayIntro }) {
     }
   }, [chat, openTasks]);
 
+  const summary = useMemo(
+    () => summarizeRecovery(recovery, plan.data?.schedule ?? [], openTasks.length),
+    [recovery, plan.data, openTasks.length],
+  );
+  const stale = Boolean(recovery) && (recovery.signature !== signature || recovery.available !== available);
+  const reviewChanges = useCallback(() => {
+    navigate("overview");
+    requestAnimationFrame(() => document.getElementById("today-title")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [navigate]);
+
   const viewTask = useCallback(() => navigate("tasks"), [navigate]);
   const openProject = useCallback((name) => { setProjectFilter(name); navigate("tasks"); }, [navigate]);
   const online = !dataError;
 
   return (
     <div className={`app scene-${scene}`}>
-      <Scene />
-      <div className="shell">
-        <Sidebar
-          page={page}
-          onNavigate={navigate}
-          onClose={() => setMenuOpen(false)}
-          inert={isMobile && !menuShown}
-          open={menuShown}
-          chat={chat}
-          onReplayIntro={onReplayIntro}
-        />
-        <TopBar
-          now={now}
-          risks={risks.data}
-          risksLoading={risks.loading && !risks.data}
-          scene={scene}
-          onScene={() => setScene((value) => (value === "night" ? "dusk" : "night"))}
-          onMenu={() => setMenuOpen(true)}
-          onOpenRail={() => setRailOpen((value) => !value)}
-          showMenu={isMobile}
-          showRailButton={isDrawer}
-          railOpen={railShown}
-        />
+      <a className="skip-link" href="#main">Skip to content</a>
+      <Sidebar
+        page={page}
+        onNavigate={navigate}
+        onClose={() => setMenuOpen(false)}
+        inert={isMobile && !menuShown}
+        open={menuShown}
+        chat={chat}
+        onReplayIntro={onReplayIntro}
+        openCount={openTasks.length}
+      />
 
-        <main className="main" id="main" ref={mainRef} tabIndex={-1}>
-          <div className="main-inner">
-            <CommandBar onAsk={ask} onNewTask={() => setModal(true)} inputRef={commandRef} />
-            {dataError && <InlineError message={dataError} onRetry={refreshTasks} />}
-            {page !== "overview" && <PageHeader page={page} />}
-
-            {page === "overview" && (
-              <Overview
-                tasks={tasks}
-                openTasks={openTasks}
-                tasksLoading={tasksLoading}
-                plan={plan}
-                risks={risks}
-                now={now}
-                focusTask={focusTask}
-                available={available}
-                onAvailable={setAvailable}
-                onToggleTask={toggleTask}
-                onNavigate={navigate}
-                onPlanWithEdith={() => ask(`plan ${available} minutes`)}
-                onNewTask={() => setModal(true)}
-              />
-            )}
-            {page === "tasks" && (
-              <TasksPage
-                tasks={tasks}
-                now={now}
-                loading={tasksLoading}
-                projectFilter={projectFilter}
-                onProjectFilter={setProjectFilter}
-                onToggle={toggleTask}
-                onDelete={deleteTask}
-                onAdd={() => setModal(true)}
-              />
-            )}
-            {page === "schedule" && <SchedulePage tasks={tasks} />}
-            {page === "focus" && <FocusPage openTasks={openTasks} focusTask={focusTask} now={now} onToggleTask={toggleTask} onNewTask={() => setModal(true)} />}
-            {page === "rescue" && <RescuePage onNavigate={navigate} />}
-            {page === "projects" && <ProjectsPage tasks={tasks} now={now} loading={tasksLoading} onOpenProject={openProject} onNewTask={() => setModal(true)} />}
-            {page === "notes" && <NotesPage revision={chat.revision} />}
-            {page === "analytics" && <AnalyticsPage tasks={tasks} openTasks={openTasks} now={now} loading={tasksLoading} />}
-            {page === "studio" && <StudioPage chat={chat} onViewTask={viewTask} />}
-
-            <footer className="app-footer">
-              <span>EDITH · Deadline Rescue</span>
-              <span><Command size={12} aria-hidden="true" /> K to ask EDITH</span>
-            </footer>
+      <div className="stage">
+        <header className={`hero-band ${page === "overview" ? "is-overview" : "is-inner"}`}>
+          <div className="hero-media" aria-hidden="true">
+            <div className="hero-photo" />
+            <div className="hero-shade" />
           </div>
-        </main>
+          <TopBar
+            risks={risks.data}
+            risksLoading={risks.loading && !risks.data}
+            scene={scene}
+            onScene={() => setScene((value) => (value === "night" ? "dusk" : "night"))}
+            onMenu={() => setMenuOpen(true)}
+            onOpenRail={() => setRailOpen((value) => !value)}
+            showMenu={isMobile}
+            showRailButton={isDrawer}
+            railOpen={railShown}
+          />
+          <div className="hero-inner">
+            <div className="hero-tools">
+              <CommandBar onAsk={ask} onNewTask={() => setModal(true)} inputRef={commandRef} />
+            </div>
+            {page === "overview" ? <HeroCopy now={now} risks={risks} plan={plan} /> : <PageHeader page={page} />}
+          </div>
+        </header>
 
-        <EdithRail
-          chat={chat}
-          online={online}
-          isDrawer={isDrawer}
-          open={railShown}
-          onClose={() => setRailOpen(false)}
-          composerRef={composerRef}
-          onSuggest={onSuggest}
-          onViewTask={viewTask}
-        />
-        {menuShown && <button type="button" className="scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />}
-        {railShown && <button type="button" className="scrim scrim-rail" onClick={() => setRailOpen(false)} aria-label="Close assistant" />}
+        <main className="content" id="main" tabIndex={-1}>
+          {dataError && <InlineError message={dataError} onRetry={refreshTasks} />}
+
+          {page === "overview" && (
+            <Overview
+              tasks={tasks}
+              openTasks={openTasks}
+              tasksLoading={tasksLoading}
+              plan={plan}
+              risks={risks}
+              now={now}
+              focusTask={focusTask}
+              available={available}
+              onAvailable={setAvailable}
+              onToggleTask={toggleTask}
+              onNavigate={navigate}
+              onNewTask={() => setModal(true)}
+              recovery={recovery}
+              summary={summary}
+              stale={stale}
+              onRecover={runRecovery}
+            />
+          )}
+          {page === "tasks" && (
+            <TasksPage
+              tasks={tasks}
+              now={now}
+              loading={tasksLoading}
+              projectFilter={projectFilter}
+              onProjectFilter={setProjectFilter}
+              onToggle={toggleTask}
+              onDelete={deleteTask}
+              onAdd={() => setModal(true)}
+            />
+          )}
+          {page === "schedule" && <SchedulePage tasks={tasks} />}
+          {page === "focus" && <FocusPage openTasks={openTasks} focusTask={focusTask} now={now} onToggleTask={toggleTask} onNewTask={() => setModal(true)} />}
+          {page === "rescue" && <RescuePage onNavigate={navigate} recoveryState={recovery} onRecover={runRecovery} />}
+          {page === "projects" && <ProjectsPage tasks={tasks} now={now} loading={tasksLoading} onOpenProject={openProject} onNewTask={() => setModal(true)} />}
+          {page === "notes" && <NotesPage revision={chat.revision} />}
+          {page === "analytics" && <AnalyticsPage tasks={tasks} openTasks={openTasks} now={now} loading={tasksLoading} />}
+          {page === "studio" && <StudioPage chat={chat} onViewTask={viewTask} />}
+
+          <footer className="app-footer">
+            <span>EDITH · Deadline Rescue</span>
+            <span><Command size={12} aria-hidden="true" /> K to ask EDITH</span>
+          </footer>
+        </main>
       </div>
 
+      <EdithRail
+        chat={chat}
+        online={online}
+        isDrawer={isDrawer}
+        open={railShown}
+        onClose={() => setRailOpen(false)}
+        composerRef={composerRef}
+        onSuggest={onSuggest}
+        onViewTask={viewTask}
+        proposal={summary}
+        proposalStale={stale}
+        onReview={reviewChanges}
+      />
+      {menuShown && <button type="button" className="scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />}
+      {railShown && <button type="button" className="scrim scrim-rail" onClick={() => setRailOpen(false)} aria-label="Close assistant" />}
       {modal && <AddTaskModal onClose={() => setModal(false)} onAdd={addTask} projects={projectNames} />}
     </div>
   );
@@ -2746,7 +3072,7 @@ function Shell({ onReplayIntro }) {
 
 export default function App() {
   const [entered, setEntered] = useState(false);
-  if (!entered) return <CinematicIntro onComplete={() => setEntered(true)} />;
+  if (!entered) return <Intro onEnter={() => setEntered(true)} />;
   return (
     <FocusProvider>
       <Shell onReplayIntro={() => setEntered(false)} />

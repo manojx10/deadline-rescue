@@ -135,5 +135,209 @@ class MCPProtocolTests(unittest.TestCase):
         self.assertTrue(updated["task"]["completed"])
 
 
+
+    def test_groq_chat_handles_missing_api_key(self):
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"GROQ_API_KEY": ""}):
+            result = main.groq_chat("Hello")
+
+        self.assertIn("Hosted AI is not configured", result)
+
+    def test_groq_chat_handles_api_failure(self):
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"GROQ_API_KEY": "test-key"}):
+            with patch.object(main, "Groq", side_effect=RuntimeError("simulated failure")):
+                result = main.groq_chat("Hello")
+
+        self.assertEqual(
+            result,
+            "I couldn't reach hosted AI right now. Please try again.",
+        )
+
+
+    def test_groq_chat_logs_returned_error_as_error(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        call = SimpleNamespace(
+            id="call_returned_error",
+            function=SimpleNamespace(name="list_tasks", arguments="{}"),
+            model_dump=lambda **kwargs: {
+                "id": "call_returned_error",
+                "type": "function",
+                "function": {"name": "list_tasks", "arguments": "{}"},
+            },
+        )
+        tool_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content=None, tool_calls=[call]
+            ))]
+        )
+        final_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content="I couldn't complete that action.", tool_calls=[]
+            ))]
+        )
+        client = SimpleNamespace(chat=SimpleNamespace(
+            completions=SimpleNamespace(create=MagicMock(
+                side_effect=[tool_response, final_response]
+            ))
+        ))
+
+        with patch.dict("os.environ", {"GROQ_API_KEY": "test-key"}):
+            with patch.object(main, "Groq", return_value=client):
+                with patch.object(main, "get_connection") as connection:
+                    connection.return_value.__enter__.return_value.execute.return_value.fetchall.return_value = []
+                    with patch.object(main, "mcp_server") as server:
+                        server.handlers = {
+                            "list_tasks": lambda args: {
+                                "error": "Simulated action failure"
+                            }
+                        }
+                        with patch.object(main, "record_assistant_action") as log_action:
+                            result = main.groq_chat("List my tasks")
+
+        self.assertEqual(result, "I couldn't complete that action.")
+        self.assertEqual(log_action.call_args.args[3], "error")
+
+
+    def test_groq_chat_executes_tool_and_returns_final_response(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        tool_call = SimpleNamespace(
+            id="call_test_1",
+            function=SimpleNamespace(
+                name="list_tasks",
+                arguments="{}",
+            ),
+            model_dump=lambda **kwargs: {
+                "id": "call_test_1",
+                "type": "function",
+                "function": {"name": "list_tasks", "arguments": "{}"},
+            },
+        )
+        tool_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content=None, tool_calls=[tool_call]
+            ))]
+        )
+        final_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content="You have no pending tasks.", tool_calls=[]
+            ))]
+        )
+        client = SimpleNamespace(chat=SimpleNamespace(
+            completions=SimpleNamespace(create=MagicMock(
+                side_effect=[tool_response, final_response]
+            ))
+        ))
+
+        with patch.dict("os.environ", {"GROQ_API_KEY": "test-key"}):
+            with patch.object(main, "Groq", return_value=client):
+                with patch.object(main, "get_connection") as connection:
+                    connection.return_value.__enter__.return_value.execute.return_value.fetchall.return_value = []
+                    with patch.object(main, "mcp_server") as server:
+                        server.handlers = {"list_tasks": lambda args: {"count": 0, "tasks": []}}
+                        with patch.object(main, "record_assistant_action") as log_action:
+                            result = main.groq_chat("List my tasks")
+
+        self.assertEqual(result, "You have no pending tasks.")
+        log_action.assert_called_once()
+        self.assertEqual(log_action.call_args.args[3], "success")
+
+
+    def test_groq_chat_handles_malformed_tool_arguments(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        call = SimpleNamespace(
+            id="call_bad_json",
+            function=SimpleNamespace(
+                name="list_tasks",
+                arguments="{invalid json",
+            ),
+            model_dump=lambda **kwargs: {
+                "id": "call_bad_json",
+                "type": "function",
+                "function": {
+                    "name": "list_tasks",
+                    "arguments": "{invalid json",
+                },
+            },
+        )
+        tool_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content=None, tool_calls=[call]
+            ))]
+        )
+        final_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content="I couldn't complete that action.", tool_calls=[]
+            ))]
+        )
+        client = SimpleNamespace(chat=SimpleNamespace(
+            completions=SimpleNamespace(create=MagicMock(
+                side_effect=[tool_response, final_response]
+            ))
+        ))
+
+        with patch.dict("os.environ", {"GROQ_API_KEY": "test-key"}):
+            with patch.object(main, "Groq", return_value=client):
+                with patch.object(main, "get_connection") as connection:
+                    connection.return_value.__enter__.return_value.execute.return_value.fetchall.return_value = []
+                    with patch.object(main, "record_assistant_action") as log_action:
+                        result = main.groq_chat("List my tasks")
+
+        self.assertEqual(result, "I couldn't complete that action.")
+        self.assertEqual(log_action.call_args.args[3], "error")
+
+
+    def test_groq_chat_logs_handler_failure_as_error(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        call = SimpleNamespace(
+            id="call_handler_failure",
+            function=SimpleNamespace(name="list_tasks", arguments="{}"),
+            model_dump=lambda **kwargs: {
+                "id": "call_handler_failure",
+                "type": "function",
+                "function": {"name": "list_tasks", "arguments": "{}"},
+            },
+        )
+        tool_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content=None, tool_calls=[call]
+            ))]
+        )
+        final_response = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content="I couldn't complete that action.", tool_calls=[]
+            ))]
+        )
+        client = SimpleNamespace(chat=SimpleNamespace(
+            completions=SimpleNamespace(create=MagicMock(
+                side_effect=[tool_response, final_response]
+            ))
+        ))
+
+        with patch.dict("os.environ", {"GROQ_API_KEY": "test-key"}):
+            with patch.object(main, "Groq", return_value=client):
+                with patch.object(main, "get_connection") as connection:
+                    connection.return_value.__enter__.return_value.execute.return_value.fetchall.return_value = []
+                    with patch.object(main, "mcp_server") as server:
+                        server.handlers = {
+                            "list_tasks": MagicMock(side_effect=RuntimeError("simulated handler failure"))
+                        }
+                        with patch.object(main, "record_assistant_action") as log_action:
+                            result = main.groq_chat("List my tasks")
+
+        self.assertEqual(result, "I couldn't complete that action.")
+        self.assertEqual(log_action.call_args.args[3], "error")
+
+
 if __name__ == "__main__":
     unittest.main()

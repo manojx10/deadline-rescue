@@ -30,6 +30,26 @@
   --coral: #f67b6f;
   --sun: #f6c85b;
 
+  /* Light surfaces (cream page, white cards). Dark contexts keep --ink above. */
+  --paper: #ece8df;
+  --card: #faf6ee;
+  --card-2: #f3efe5;
+  --card-line: rgba(60, 50, 28, 0.13);
+  --text: #18241b;
+  --text-2: #36423a;
+  --text-muted: #566058;
+  --green: #256b3d;
+  --green-2: #2f8a52;
+  --forest: #1f3328;
+  --red: #c93a2f;
+  --orange: #d9822b;
+  --blue: #4d5fd6;
+  --c-urgent: #e0a21f;
+  --c-high: #e4584b;
+  --c-medium: #3f7f58;
+  --c-low: #9fd3ac;
+  --shadow-card: 0 1px 2px rgba(50, 40, 15, 0.06), 0 10px 28px rgba(50, 40, 15, 0.07);
+
   /* Shape and depth */
   --radius-xl: 26px;
   --radius-lg: 22px;
@@ -38,7 +58,7 @@
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 244, 220, 0.07);
   --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
 
-  --focus-ring: 0 0 0 2px #14170f, 0 0 0 4px var(--champagne);
+  --focus-ring: 0 0 0 2px #fbf8f0, 0 0 0 4px #2f8a52;
 }
 
 *,
@@ -56,8 +76,8 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  background: #11130f;
-  color: var(--ink);
+  background: var(--paper);
+  color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
@@ -95,8 +115,8 @@ button:disabled {
 }
 
 select option {
-  background: #1a1f1b;
-  color: #f7f2e7;
+  background: #ffffff;
+  color: #18241b;
 }
 
 ::placeholder {

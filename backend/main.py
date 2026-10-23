@@ -1,10 +1,14 @@
 import json
 import asyncio
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
+from hmac import compare_digest
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
+from threading import Lock
+from time import monotonic
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -22,11 +26,159 @@ from dotenv import load_dotenv
 # --------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
 DATABASE_PATH = Path(
     os.environ.get("DEADLINE_RESCUE_DATABASE_PATH", BASE_DIR / "deadline_rescue.db")
 )
 
-load_dotenv(BASE_DIR / ".env")
+LOCAL_DEVELOPMENT_ORIGINS = {
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+}
+
+
+def _csv_environment_setting(name: str, default: set[str]) -> set[str]:
+    """Read a comma-separated origin allow-list without accepting wildcards."""
+    configured = os.environ.get(name, "")
+    if not configured.strip():
+        return set(default)
+    return {
+        value.strip().rstrip("/")
+        for value in configured.split(",")
+        if value.strip() and value.strip() != "*"
+    }
+
+
+def _environment_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_production() -> bool:
+    return os.environ.get("APP_ENV", "development").strip().lower() in {
+        "production",
+        "prod",
+    }
+
+
+def get_allowed_api_origins() -> set[str]:
+    return _csv_environment_setting("CORS_ALLOWED_ORIGINS", LOCAL_DEVELOPMENT_ORIGINS)
+
+
+def get_allowed_mcp_origins() -> set[str]:
+    return _csv_environment_setting("MCP_ALLOWED_ORIGINS", get_allowed_api_origins())
+
+
+def _configured_positive_integer(name: str, default: int, maximum: int) -> int:
+    try:
+        return max(1, min(int(os.environ.get(name, str(default))), maximum))
+    except ValueError:
+        return default
+
+
+def _configured_rate_limit(name: str, default: int) -> int:
+    return _configured_positive_integer(name, default, 10_000)
+
+
+class InMemoryRateLimiter:
+    """Small per-process limiter; use a gateway limiter when scaling horizontally."""
+
+    def __init__(self) -> None:
+        self._requests: dict[str, deque[float]] = defaultdict(deque)
+        self._lock = Lock()
+
+    def check(self, key: str, limit: int, window_seconds: int = 60) -> int:
+        """Return retry seconds, or zero when this request is allowed."""
+        now = monotonic()
+        with self._lock:
+            requests = self._requests[key]
+            while requests and now - requests[0] >= window_seconds:
+                requests.popleft()
+            if len(requests) >= limit:
+                return max(1, int(window_seconds - (now - requests[0])) + 1)
+            requests.append(now)
+        return 0
+
+    def clear(self) -> None:
+        with self._lock:
+            self._requests.clear()
+
+
+rate_limiter = InMemoryRateLimiter()
+
+
+def _request_client_id(request: Request) -> str:
+    """Do not trust forwarded headers unless the deployment explicitly opts in."""
+    if _environment_flag("TRUST_PROXY_HEADERS"):
+        forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+        if forwarded:
+            return forwarded
+    return request.client.host if request.client else "unknown-client"
+
+
+def _request_rate_limit(path: str) -> int:
+    if path == "/mcp":
+        return _configured_rate_limit("MCP_RATE_LIMIT_PER_MINUTE", 60)
+    if path == "/api/assistant/chat":
+        return _configured_rate_limit("ASSISTANT_RATE_LIMIT_PER_MINUTE", 30)
+    return _configured_rate_limit("API_RATE_LIMIT_PER_MINUTE", 120)
+
+
+def _expected_auth_token(path: str) -> Optional[str]:
+    """Return the applicable bearer token, if this deployment requires one."""
+    if path == "/mcp":
+        token = os.environ.get("DEADLINE_RESCUE_MCP_TOKEN") or os.environ.get(
+            "DEADLINE_RESCUE_API_TOKEN"
+        )
+        required = (
+            _is_production()
+            or _environment_flag("API_REQUIRE_AUTH")
+            or _environment_flag("MCP_REQUIRE_AUTH")
+            or bool(token)
+        )
+    else:
+        token = os.environ.get("DEADLINE_RESCUE_API_TOKEN")
+        required = _is_production() or _environment_flag("API_REQUIRE_AUTH") or bool(token)
+    if not required:
+        return None
+    return token or ""
+
+
+def _has_valid_bearer_token(request: Request, expected_token: str) -> bool:
+    authorization = request.headers.get("authorization", "")
+    scheme, _, supplied_token = authorization.partition(" ")
+    return (
+        scheme.lower() == "bearer"
+        and bool(supplied_token)
+        and compare_digest(supplied_token, expected_token)
+    )
+
+
+def _add_security_headers(response: Response, request: Request) -> Response:
+    response.headers.setdefault("Cache-Control", "no-store")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    )
+    if request.url.scheme == "https" or _environment_flag("FORCE_HTTPS"):
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
+def _security_error(request: Request, status_code: int, message: str, **headers: str) -> Response:
+    return _add_security_headers(
+        JSONResponse(status_code=status_code, content={"detail": message}, headers=headers),
+        request,
+    )
 
 
 
@@ -51,15 +203,60 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["MCP-Protocol-Version"],
+    allow_origins=sorted(get_allowed_api_origins()),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Accept", "Authorization", "Content-Type", "MCP-Protocol-Version"],
+    expose_headers=["MCP-Protocol-Version", "Retry-After"],
 )
+
+
+@app.middleware("http")
+async def protect_public_endpoints(request: Request, call_next):
+    """Apply cheap request hardening before application handlers read a body."""
+    path = request.url.path
+    if request.method != "OPTIONS" and (path.startswith("/api/") or path == "/mcp"):
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                body_size = int(content_length)
+            except ValueError:
+                return _security_error(request, 400, "Invalid Content-Length header.")
+            if body_size < 0:
+                return _security_error(request, 400, "Invalid Content-Length header.")
+            maximum_body_size = _configured_positive_integer(
+                "MAX_REQUEST_BODY_BYTES", 65_536, 10 * 1024 * 1024
+            )
+            if body_size > maximum_body_size:
+                return _security_error(request, 413, "Request body is too large.")
+
+        expected_token = _expected_auth_token(path)
+        if expected_token == "":
+            return _security_error(
+                request,
+                503,
+                "Authentication is required but no server token is configured.",
+            )
+        if expected_token and not _has_valid_bearer_token(request, expected_token):
+            return _security_error(
+                request,
+                401,
+                "A valid bearer token is required.",
+                **{"WWW-Authenticate": "Bearer"},
+            )
+
+        retry_after = rate_limiter.check(
+            f"{_request_client_id(request)}:{path}", _request_rate_limit(path)
+        )
+        if retry_after:
+            return _security_error(
+                request,
+                429,
+                "Too many requests. Please try again shortly.",
+                **{"Retry-After": str(retry_after)},
+            )
+
+    return _add_security_headers(await call_next(request), request)
 
 
 # --------------------------------------------------
@@ -976,7 +1173,14 @@ def groq_chat(message: str, session_id: str = "default") -> str:
                         record_assistant_action(name, arguments, result, "error")
                     else:
                         result = handler(arguments)
-                        record_assistant_action(name, arguments, result, "success")
+                        action_status = (
+                            "error"
+                            if isinstance(result, dict) and "error" in result
+                            else "success"
+                        )
+                        record_assistant_action(
+                            name, arguments, result, action_status
+                        )
 
                 except Exception:
                     result = {
@@ -996,10 +1200,9 @@ def groq_chat(message: str, session_id: str = "default") -> str:
 
         return "I couldn't finish that request in one attempt. Please try again."
 
-    except Exception as exc:
-        import traceback
-        print(f"EDITH hosted AI error: {type(exc).__name__}: {exc}", flush=True)
-        traceback.print_exc()
+    except Exception:
+        # Do not print provider exceptions: SDK errors can include request details.
+        print("EDITH hosted AI request failed.", flush=True)
         return "I couldn't reach hosted AI right now. Please try again."
 
 
@@ -1505,21 +1708,6 @@ mcp_server = DeadlineRescueMCPServer(
 
 
 MCP_HEADERS = {"MCP-Protocol-Version": MCP_PROTOCOL_VERSION}
-
-
-def get_allowed_mcp_origins():
-    configured = os.environ.get("MCP_ALLOWED_ORIGINS", "")
-    if configured.strip():
-        return {
-            origin.strip().rstrip("/")
-            for origin in configured.split(",")
-            if origin.strip()
-        }
-
-    return {
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    }
 
 
 

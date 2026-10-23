@@ -1,0 +1,17 @@
+{
+  "name": "Deadline Rescue — EDITH",
+  "short_name": "Deadline Rescue",
+  "description": "A local-first deadline planning and recovery assistant.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f4ed",
+  "theme_color": "#f6f4ed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

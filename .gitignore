@@ -51,3 +51,9 @@ frontend-backup-*/
 # Local frontend backups
 frontend/src/*.pre-consolidation
 frontend/src/*.voice-prepatch-backup
+
+# Keep the frontend lockfile for reproducible CI builds
+!frontend/package-lock.json
+
+# Local working notes — do not publish
+/README-PATCH.txt

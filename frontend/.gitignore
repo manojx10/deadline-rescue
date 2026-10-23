@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*
+
+# Keep the frontend lockfile for reproducible CI builds
+!package-lock.json

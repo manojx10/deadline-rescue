@@ -1,13 +1,21 @@
 # Submission readiness checklist
 
-- [ ] Confirm the repository is public with a license, or private and shared with the designated reviewers as the event requires.
-- [ ] Verify README setup instructions from a clean environment; document prerequisites, backend/frontend startup, tests, and MCP endpoint.
-- [ ] Run backend tests and frontend production build; record actual results and fix failures.
-- [ ] Demonstrate real MCP initialize, tool discovery, and at least one tool call at runtime.
-- [ ] Clearly label the Alexa+ experience as a simulation; do not claim live Alexa+ device/service access.
-- [ ] Record an English demo video under three minutes and publish an accessible YouTube/Vimeo link.
-- [ ] Complete product feedback for every tool/API/SDK used and the relevant track.
-- [ ] Explain significant post-August 31 changes if the project predates the event.
-- [ ] Add only genuine issues to `FRICTION.md`.
-- [ ] Remove secrets, local databases, backups, caches, and generated build artifacts from the submitted repository.
-- [ ] Test README commands and the demo using the exact commit intended for submission.
+## Ready in the repository
+
+- [x] MIT [license](LICENSE) is present.
+- [x] Local setup, privacy model, and production boundaries are documented in [README.md](README.md).
+- [x] The Alexa+ scope is accurately labelled as a self-hosted MCP server and browser simulation.
+- [x] Real MCP handshake, tool discovery, and tool-call instructions are in [JUDGE_QUICKSTART.md](JUDGE_QUICKSTART.md).
+- [x] Product-feedback text is prepared in [docs/PRODUCT-FEEDBACK.md](docs/PRODUCT-FEEDBACK.md).
+- [x] Significant-update text is prepared in [docs/SIGNIFICANT-UPDATE.md](docs/SIGNIFICANT-UPDATE.md).
+- [x] The demo script is timed below three minutes in [DEMO-SCRIPT.md](DEMO-SCRIPT.md).
+- [x] `FRICTION.md` intentionally contains no invented reports.
+- [x] Ignore rules cover local databases, environment files, build folders, caches, backups, and deployment credentials.
+
+## Requires the submitter's account or recording
+
+- [ ] Create or connect the public GitHub repository, push this exact reviewed tree, and add the repository URL to Devpost.
+- [ ] Run the documented verification commands on the exact submitted commit and record the actual results.
+- [ ] Record the English demo, keep it under three minutes, publish it publicly on YouTube or Vimeo, and add its URL to [docs/SUBMISSION.md](docs/SUBMISSION.md).
+- [ ] Copy the prepared submission copy and product feedback into the Devpost form, selecting **Alexa+** as the primary track and **Open Source** only after the public-repository requirement is met.
+- [ ] Confirm all shown video assets and audio are original or properly licensed.

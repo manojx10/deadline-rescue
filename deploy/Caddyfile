@@ -1,0 +1,38 @@
+{
+    email {$CADDY_EMAIL}
+}
+
+{$PUBLIC_HOSTNAME} {
+    # Keep this order: otherwise Caddy's default directive ordering can rewrite
+    # an API URL to index.html before reverse_proxy evaluates the matcher.
+    route {
+        encode zstd gzip
+
+        # This is intentionally a private single-user preview gate. It is not a
+        # replacement for per-user identity and tenancy in a public release.
+        basic_auth {
+            {$DEADLINE_RESCUE_DEMO_USER} {$DEADLINE_RESCUE_DEMO_PASSWORD_HASH}
+        }
+
+        @backend path /api/* /mcp
+        reverse_proxy @backend backend:5050 {
+            # The service token stays inside the proxy/backend network and is
+            # never embedded in Vite output or exposed to the browser.
+            header_up Authorization "Bearer {$DEADLINE_RESCUE_API_TOKEN}"
+        }
+
+        # Static files get a browser-safe policy. API and MCP responses retain
+        # the stricter headers that the FastAPI middleware sets itself.
+        header {
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "no-referrer"
+            Permissions-Policy "camera=(), geolocation=(), microphone=()"
+            Content-Security-Policy "default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; connect-src 'self'; img-src 'self' data:; media-src 'self'; manifest-src 'self'"
+        }
+
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}

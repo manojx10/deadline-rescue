@@ -11,7 +11,9 @@ Deadline Rescue implements a stateless Streamable HTTP MCP endpoint at `POST /mc
 - Untrusted browser origins are rejected with `403`.
 - The endpoint is stateless and does not issue `MCP-Session-Id`; a session ID is optional for this mode.
 - After initialization, requests must include `MCP-Protocol-Version: 2025-11-25`.
+- In production, MCP fails closed unless a server-side bearer token is configured. Use `DEADLINE_RESCUE_MCP_TOKEN` (or the fallback `DEADLINE_RESCUE_API_TOKEN`) and send it in `Authorization: Bearer <token>`.
+- Browser origins are configured with exact values in `MCP_ALLOWED_ORIGINS`; wildcard origins are ignored. Do not expose an MCP bearer token in browser code.
 
 ## Remaining release gate
 
-Run `cd backend && .venv/bin/pytest -q`. Before claiming full MCP compliance in the submission, also test with an independent MCP client that supports protocol version `2025-11-25`, and verify its initialization, tool calls, and reconnect behavior. This project is a self-hosted MCP integration and browser simulation; it is **not** a live connection to a consumer Alexa+ device/service.
+Run `cd backend && .venv/bin/pytest -q`. Before claiming full MCP compliance in the submission, also test with an independent MCP client that supports protocol version `2025-11-25`, and verify its initialization, authenticated tool calls, and reconnect behavior. This project is a self-hosted MCP integration and browser simulation; it is **not** a live connection to a consumer Alexa+ device/service.

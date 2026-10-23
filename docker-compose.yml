@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: production
+      DEADLINE_RESCUE_API_TOKEN: ${DEADLINE_RESCUE_API_TOKEN:?Set this in deploy/.env}
+      CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?Set this in deploy/.env}
+      MCP_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?Set this in deploy/.env}
+      FORCE_HTTPS: "true"
+      TRUST_PROXY_HEADERS: "true"
+      DEADLINE_RESCUE_DATABASE_PATH: /data/deadline_rescue.db
+      API_RATE_LIMIT_PER_MINUTE: "120"
+      ASSISTANT_RATE_LIMIT_PER_MINUTE: "30"
+      MCP_RATE_LIMIT_PER_MINUTE: "60"
+      MAX_REQUEST_BODY_BYTES: "65536"
+    volumes:
+      - deadline-rescue-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    environment:
+      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME:?Set this in deploy/.env}
+      CADDY_EMAIL: ${CADDY_EMAIL:?Set this in deploy/.env}
+      DEADLINE_RESCUE_API_TOKEN: ${DEADLINE_RESCUE_API_TOKEN:?Set this in deploy/.env}
+      DEADLINE_RESCUE_DEMO_USER: ${DEADLINE_RESCUE_DEMO_USER:?Set this in deploy/.env}
+      DEADLINE_RESCUE_DEMO_PASSWORD_HASH: ${DEADLINE_RESCUE_DEMO_PASSWORD_HASH:?Set this in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  deadline-rescue-data:
+  caddy-data:
+  caddy-config:
