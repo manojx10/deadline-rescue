@@ -5212,3 +5212,57 @@
 @media (max-width: 600px) {
   .topbar .notice { right: 12px !important; }
 }
+
+/* Dark theme: readable text on intentionally light recovery cards */
+:root[data-theme="dark"] .recovery-deferred,
+:root[data-theme="dark"] .recovery-deferred *,
+:root[data-theme="dark"] .risk-note,
+:root[data-theme="dark"] .risk-note * {
+  color: #29352e !important;
+}
+
+:root[data-theme="dark"] .plan-item,
+:root[data-theme="dark"] .plan-item * {
+  color: #29352e;
+}
+
+:root[data-theme="dark"] .plan-item small {
+  color: #526158;
+}
+
+:root[data-theme="dark"] .schedule-day {
+  color: #29352e;
+}
+
+:root[data-theme="dark"] .schedule-day strong,
+:root[data-theme="dark"] .schedule-day small,
+:root[data-theme="dark"] .schedule-day span {
+  color: #29352e;
+}
+
+
+/* Dark mode only: fix Schedule task-card contrast */
+:root[data-theme="dark"] .schedule-date {
+  background: #ece7d9;
+  color: #26352d !important;
+}
+:root[data-theme="dark"] .schedule-date *,
+:root[data-theme="dark"] .schedule-item,
+:root[data-theme="dark"] .schedule-item strong,
+:root[data-theme="dark"] .schedule-item small,
+:root[data-theme="dark"] .schedule-item .schedule-time,
+:root[data-theme="dark"] .deferred-block,
+:root[data-theme="dark"] .deferred-block * {
+  color: #26352d !important;
+}
+:root[data-theme="dark"] .schedule-item {
+  background: #f5f1e7;
+  border-radius: 12px;
+  padding: 12px;
+}
+:root[data-theme="dark"] .deferred-block {
+  background: #fbf0dc;
+  border-radius: 14px;
+  padding: 14px;
+}
+

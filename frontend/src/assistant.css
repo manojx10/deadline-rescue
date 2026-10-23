@@ -725,3 +725,265 @@
 :root[data-theme="dark"] .rail-card .rail-head * {
   color: #edf3eb;
 }
+
+/* Final EDITH chat readability and interaction fixes */
+:root[data-theme="dark"] .assistant-pane .suggestion,
+:root[data-theme="dark"] .assistant-pane .suggestion span,
+:root[data-theme="dark"] .assistant-rail .suggestion,
+:root[data-theme="dark"] .assistant-rail .suggestion span,
+:root[data-theme="dark"] .chat-panel .suggestion,
+:root[data-theme="dark"] .chat-panel .suggestion span {
+  color: #26352b !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .suggestion,
+:root[data-theme="dark"] .assistant-rail .suggestion,
+:root[data-theme="dark"] .chat-panel .suggestion {
+  background: #f4f0e5 !important;
+  border: 1px solid #d6d0c1 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .suggestion:disabled,
+:root[data-theme="dark"] .assistant-rail .suggestion:disabled,
+:root[data-theme="dark"] .chat-panel .suggestion:disabled {
+  opacity: 0.8 !important;
+  color: #59665b !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .msg-bot,
+:root[data-theme="dark"] .assistant-pane .msg-bot p,
+:root[data-theme="dark"] .assistant-pane .msg-bot li,
+:root[data-theme="dark"] .assistant-rail .msg-bot,
+:root[data-theme="dark"] .chat-panel .msg-bot {
+  color: #edf2e9 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .msg-user {
+  color: #ffffff !important;
+  background: #245b3b !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer textarea,
+:root[data-theme="dark"] .assistant-rail .composer textarea,
+:root[data-theme="dark"] .chat-panel .composer textarea {
+  color: #edf2e9 !important;
+  caret-color: #edf2e9 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer textarea::placeholder,
+:root[data-theme="dark"] .assistant-rail .composer textarea::placeholder,
+:root[data-theme="dark"] .chat-panel .composer textarea::placeholder {
+  color: #aab7aa !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .assistant-pane .composer button:disabled,
+:root[data-theme="dark"] .assistant-rail .composer button:disabled,
+:root[data-theme="dark"] .chat-panel .composer button:disabled {
+  color: #aab7aa !important;
+  opacity: 0.75 !important;
+}
+
+/* FINAL FIX — EDITH full-page chat readability */
+:root[data-theme="dark"] .app.page-studio .studio-empty,
+:root[data-theme="dark"] .app.page-studio .studio-empty p {
+  color: #c2cec3 !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .studio-empty h2 {
+  color: #f1f5ef !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .prompt-row button {
+  background: #e9eee5 !important;
+  color: #203326 !important;
+  border: 1px solid #aab9a9 !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .prompt-row button:disabled {
+  color: #536456 !important;
+  opacity: 0.8 !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .prompt-row button:hover:not(:disabled) {
+  background: #d5e5d3 !important;
+  color: #172a1d !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .studio-chat .msg-bot,
+:root[data-theme="dark"] .app.page-studio .studio-chat .msg-bot p,
+:root[data-theme="dark"] .app.page-studio .studio-chat .msg-bot * {
+  color: #f1f5ef !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .studio-chat .msg-bot {
+  background: #202822 !important;
+  border: 1px solid #344237 !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .studio-chat .msg-user,
+:root[data-theme="dark"] .app.page-studio .studio-chat .msg-user p {
+  color: #ffffff !important;
+  background: #205535 !important;
+  border-color: #326d46 !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .composer textarea {
+  color: #f1f5ef !important;
+  caret-color: #8fd5a0 !important;
+}
+
+:root[data-theme="dark"] .app.page-studio .composer textarea::placeholder {
+  color: #b7c4b8 !important;
+  opacity: 1 !important;
+}
+
+/* Dark theme: right-rail assistant must keep readable contrast */
+:root[data-theme="dark"] .rail-card .msg-bot,
+:root[data-theme="dark"] .assistant-rail .msg-bot,
+:root[data-theme="dark"] .chat-panel .msg-bot {
+  background: #202822 !important;
+  color: #f1f5ef !important;
+  border-color: #3b4a3d !important;
+}
+
+:root[data-theme="dark"] .rail-card .msg-bot *,
+:root[data-theme="dark"] .assistant-rail .msg-bot *,
+:root[data-theme="dark"] .chat-panel .msg-bot * {
+  color: #f1f5ef !important;
+}
+
+:root[data-theme="dark"] .rail-card .suggestion,
+:root[data-theme="dark"] .assistant-rail .suggestion,
+:root[data-theme="dark"] .chat-panel .suggestion {
+  background: #e9eee5 !important;
+  color: #203326 !important;
+  border-color: #aab9a9 !important;
+}
+
+:root[data-theme="dark"] .rail-card .suggestion *,
+:root[data-theme="dark"] .assistant-rail .suggestion *,
+:root[data-theme="dark"] .chat-panel .suggestion * {
+  color: #203326 !important;
+}
+
+:root[data-theme="dark"] .rail-card .composer textarea,
+:root[data-theme="dark"] .assistant-rail .composer textarea,
+:root[data-theme="dark"] .chat-panel .composer textarea {
+  color: #f1f5ef !important;
+}
+
+:root[data-theme="dark"] .rail-card .composer textarea::placeholder,
+:root[data-theme="dark"] .assistant-rail .composer textarea::placeholder,
+:root[data-theme="dark"] .chat-panel .composer textarea::placeholder {
+  color: #b7c4b8 !important;
+  opacity: 1 !important;
+}
+
+/* Targeted fix: EDITH welcome card in dark mode */
+:root[data-theme="dark"] .rail-card .greeting-card {
+  background: #202a22 !important;
+  color: #f1f5ef !important;
+  border: 1px solid #39483b !important;
+}
+
+:root[data-theme="dark"] .rail-card .greeting-card h2 {
+  color: #f7f5ec !important;
+}
+
+:root[data-theme="dark"] .rail-card .greeting-card p {
+  color: #c5d0c5 !important;
+  opacity: 1 !important;
+}
+
+/* Keep nested text readable if other theme rules target descendants */
+:root[data-theme="dark"] .rail-card .greeting-card h2 *,
+:root[data-theme="dark"] .rail-card .greeting-card p * {
+  color: inherit !important;
+}
+
+/* Personalized profile photo avatars */
+.profile-avatar-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.topbar-profile-button .profile-avatar-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+/* EDITH sidebar profile: compact avatar and aligned identity */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.profile > .profile-avatar,
+.profile > .profile-avatar-photo {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  flex: 0 0 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.profile .profile-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.profile .profile-text strong,
+.profile .profile-text small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile .profile-settings {
+  flex: 0 0 auto;
+}
+
+/* Dark mode: restore readable text on light task/status cards */
+:root[data-theme="dark"] .app [class*="task"] [class*="card"],
+:root[data-theme="dark"] .app [class*="deadline"] [class*="card"],
+:root[data-theme="dark"] .app [class*="recovery"] [class*="card"],
+:root[data-theme="dark"] .app [class*="schedule"] [class*="card"] {
+  color: #26352d;
+}
+
+:root[data-theme="dark"] .app [class*="task"] [class*="card"] *,
+:root[data-theme="dark"] .app [class*="deadline"] [class*="card"] *,
+:root[data-theme="dark"] .app [class*="recovery"] [class*="card"] *,
+:root[data-theme="dark"] .app [class*="schedule"] [class*="card"] * {
+  color: inherit;
+}
+
+
+/* Dark-mode contrast fix for Schedule and Deadline Rescue status cards */
+:root[data-theme="dark"] .recovery-deferred-item,
+:root[data-theme="dark"] .recovery-deferred-item *,
+:root[data-theme="dark"] .risk-note,
+:root[data-theme="dark"] .risk-note *,
+:root[data-theme="dark"] .plan-item,
+:root[data-theme="dark"] .plan-item *,
+:root[data-theme="dark"] .schedule-day,
+:root[data-theme="dark"] .schedule-day * {
+  color: #26352d !important;
+}
+
+:root[data-theme="dark"] .recovery-deferred-item,
+:root[data-theme="dark"] .risk-note {
+  color: #26352d !important;
+}
+

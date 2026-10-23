@@ -77,6 +77,10 @@ function ProfileSetup({ initialProfile, onSave, onCancel }) {
     ...DEFAULT_PROFILE,
     ...(initialProfile || {}),
   }));
+  const [photoPreview, setPhotoPreview] = useState(
+    initialProfile?.avatarPhoto || ""
+  );
+  const [photoConsent, setPhotoConsent] = useState(false);
   const [daysText, setDaysText] = useState(
     (form.activeDays || DEFAULT_PROFILE.activeDays).join(", ")
   );
@@ -89,6 +93,11 @@ function ProfileSetup({ initialProfile, onSave, onCancel }) {
     event.preventDefault();
     const preferredName = form.preferredName.trim();
     if (!form.fullName.trim() || !preferredName) return;
+    if (!initialProfile && (!photoPreview || !photoConsent)) {
+      alert("Please add your photo and confirm consent to continue.");
+      return;
+    }
+    
     onSave({
       ...form,
       fullName: form.fullName.trim(),
@@ -118,6 +127,42 @@ function ProfileSetup({ initialProfile, onSave, onCancel }) {
         <label>Preferred name *
           <input required value={form.preferredName} onChange={(e) => update("preferredName", e.target.value)} />
         </label>
+        <section style={{ display: "grid", gap: 10, margin: "8px 0 18px" }}>
+          <label htmlFor="edith-avatar-photo">Your photo for your EDITH avatar</label>
+          {photoPreview && (
+            <img src={photoPreview} alt="Profile photo preview"
+              style={{ width: 104, height: 104, borderRadius: "50%", objectFit: "cover" }} />
+          )}
+          <input id="edith-avatar-photo" type="file" accept="image/*"
+            capture="user"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              if (!file.type.startsWith("image/")) {
+                alert("Choose an image file.");
+                return;
+              }
+              if (file.size > 2 * 1024 * 1024) {
+                alert("Choose an image smaller than 2 MB.");
+                event.target.value = "";
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (typeof reader.result === "string") {
+                  setPhotoPreview(reader.result);
+                  update("avatarPhoto", reader.result);
+                }
+              };
+              reader.readAsDataURL(file);
+            }} />
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <input type="checkbox" checked={photoConsent}
+              onChange={(event) => setPhotoConsent(event.target.checked)} />
+            I consent to using this photo to create my personalized avatar.
+          </label>
+        </section>
+
         <label>Email (optional)
           <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} autoComplete="email" />
         </label>
@@ -898,7 +943,9 @@ function Sidebar({ page, onNavigate, onClose, inert, open, chat, onReplayIntro, 
       </figure>
 
       <div className="profile" ref={settingsRef}>
-        <span className="profile-avatar" aria-hidden="true">{PROFILE.name.charAt(0)}</span>
+        {PROFILE.avatarPhoto
+          ? <img className="profile-avatar profile-avatar-photo" src={PROFILE.avatarPhoto} alt={`${PROFILE.name}'s avatar`} />
+          : <span className="profile-avatar" aria-hidden="true">{PROFILE.name.charAt(0)}</span>}
         <div className="profile-text">
           <strong>{PROFILE.name}</strong>
           <small>{PROFILE.role}</small>
@@ -996,7 +1043,7 @@ function TopBar({ risks, risksLoading, scene, theme, onThemeToggle, onEditProfil
             </div>
           )}
         </div>
-        <button type="button" className="avatar topbar-profile-button" onClick={onEditProfile} aria-label="Open profile" title="Edit profile">{PROFILE.name.charAt(0)}</button>
+        <button type="button" className="avatar topbar-profile-button" onClick={onEditProfile} aria-label="Open profile" title="Edit profile">{PROFILE.avatarPhoto ? <img className="profile-avatar-photo" src={PROFILE.avatarPhoto} alt="" /> : PROFILE.name.charAt(0)}</button>
         {showRailButton && (
           <button
             type="button"

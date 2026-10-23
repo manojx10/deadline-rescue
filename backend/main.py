@@ -208,7 +208,7 @@ app.add_middleware(
     allow_origins=sorted(get_allowed_api_origins()),
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Accept", "Authorization", "Content-Type", "MCP-Protocol-Version"],
+    allow_headers=["Accept", "Authorization", "Content-Type", "MCP-Protocol-Version", "X-EDITH-Profile-ID"],
     expose_headers=["MCP-Protocol-Version", "Retry-After"],
 )
 
